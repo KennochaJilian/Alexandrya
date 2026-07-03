@@ -1,0 +1,115 @@
+<main class="detail-page">
+  <header class="app-header">
+    <a class="brand-lockup" routerLink="/books" aria-label="Alexandrya">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>Alexandrya</span>
+    </a>
+
+    <div class="header-actions">
+      <button type="button" class="icon-button user-button" [title]="currentUser()?.email || 'Compte'">
+        <svg lucideCircleUser aria-hidden="true" [size]="28"></svg>
+      </button>
+      <button type="button" class="icon-button" title="Se déconnecter" (click)="logout()">
+        <svg lucideLogOut aria-hidden="true" [size]="26"></svg>
+      </button>
+    </div>
+  </header>
+
+  <img class="ivy-corner" src="/assets/ivy-branch.svg" alt="" aria-hidden="true" />
+
+  <section class="detail-shell">
+    <a class="back-link" routerLink="/books">
+      <svg lucideArrowLeft aria-hidden="true" [size]="18"></svg>
+      <span>Retour</span>
+    </a>
+
+    @if (isLoading()) {
+      <p class="notice">Chargement...</p>
+    } @else if (error() && !book()) {
+      <p class="notice error" role="alert">{{ error() }}</p>
+    } @else if (book(); as book) {
+      <section class="book-hero">
+        <span class="cover" aria-hidden="true">
+          <span>{{ bookInitial(book) }}</span>
+        </span>
+
+        <div class="hero-copy">
+          <p class="format">{{ book.format.toUpperCase() }}</p>
+          <h1>{{ book.title }}</h1>
+          <p class="authors">Par <b>{{ formatAuthors(book) }}</b></p>
+
+          <div class="chips">
+            @if (primaryGenre(book); as genre) {
+              <span class="genre-chip">
+                <svg lucideTag aria-hidden="true" [size]="14"></svg>
+                {{ genre }}
+              </span>
+            }
+            <span class="genre-chip muted">
+              <svg lucideCalendar aria-hidden="true" [size]="14"></svg>
+              {{ formatDate(book) }}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section class="kindle-action">
+        <button type="button" (click)="sendToKindle()" [disabled]="isSending() || !currentUser()?.kindleEmail">
+          <svg lucideSend aria-hidden="true" [size]="18"></svg>
+          <span>{{ isSending() ? 'Envoi...' : 'Envoyer au Kindle' }}</span>
+        </button>
+        @if (!currentUser()?.kindleEmail) {
+          <p class="hint">Adresse Kindle manquante pour ce compte.</p>
+        }
+      </section>
+
+      @if (sentMessage()) {
+        <p class="notice success">{{ sentMessage() }}</p>
+      }
+
+      @if (error()) {
+        <p class="notice error" role="alert">{{ error() }}</p>
+      }
+
+      <dl class="metadata">
+        <div>
+          <dt>Publication</dt>
+          <dd>{{ formatDate(book) }}</dd>
+        </div>
+        <div>
+          <dt>Genres</dt>
+          <dd>{{ formatGenres(book) }}</dd>
+        </div>
+        <div>
+          <dt>Fichier</dt>
+          <dd>{{ book.fileName }}</dd>
+        </div>
+        <div>
+          <dt>Taille</dt>
+          <dd>{{ formatSize(book) }}</dd>
+        </div>
+        <div class="wide">
+          <dt>Chemin</dt>
+          <dd>{{ book.relativePath }}</dd>
+        </div>
+      </dl>
+
+      @if (book.description) {
+        <section class="description">
+          <h2>
+            <svg lucideFileText aria-hidden="true" [size]="18"></svg>
+            <span>Résumé</span>
+          </h2>
+          <p>{{ book.description }}</p>
+        </section>
+      }
+    }
+  </section>
+
+  <footer class="app-footer">
+    <span>Mentions legales</span>
+    <span>Copyright © 2026 - Aquarius</span>
+  </footer>
+
+  <img class="decor-corner" src="/assets/petal-corner.svg" alt="" aria-hidden="true" />
+</main>

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.DS_Store
+
+backend/dist/
+backend/data/users.json
+backend/data/books.json
+
+frontend/dist/
+frontend/.angular/

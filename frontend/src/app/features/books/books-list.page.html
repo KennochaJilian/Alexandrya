@@ -1,0 +1,127 @@
+<main class="library-page">
+  <header class="app-header">
+    <a class="brand-lockup" routerLink="/books" aria-label="Alexandrya">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>Alexandrya</span>
+    </a>
+
+    <div class="header-actions">
+      <button type="button" class="icon-button user-button" [title]="currentUser()?.email || 'Compte'">
+        <svg lucideCircleUser aria-hidden="true" [size]="28"></svg>
+      </button>
+      <button type="button" class="icon-button" title="Se déconnecter" (click)="logout()">
+        <svg lucideLogOut aria-hidden="true" [size]="26"></svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="search-hero">
+    <img class="ivy-corner" src="/assets/ivy-branch.svg" alt="" aria-hidden="true" />
+
+    <form class="search-form" [formGroup]="filters">
+      <label class="search-box">
+        <span class="sr-only">Recherche</span>
+        <svg lucideSearch aria-hidden="true" [size]="22"></svg>
+        <input type="search" formControlName="q" placeholder="Recherche" />
+      </label>
+
+      <button
+        type="button"
+        class="filter-toggle"
+        title="Filtres"
+        [class.is-active]="advancedOpen()"
+        (click)="toggleAdvancedFilters()"
+      >
+        <svg lucideSlidersHorizontal aria-hidden="true" [size]="22"></svg>
+      </button>
+
+      @if (advancedOpen()) {
+        <div class="advanced-filters">
+          <label>
+            <span>Titre</span>
+            <input type="search" formControlName="title" />
+          </label>
+          <label>
+            <span>Auteur</span>
+            <input type="search" formControlName="author" />
+          </label>
+          <label>
+            <span>Genre</span>
+            <input type="search" formControlName="genre" />
+          </label>
+          <label>
+            <span>Après</span>
+            <input type="date" formControlName="publishedFrom" />
+          </label>
+          <label>
+            <span>Avant</span>
+            <input type="date" formControlName="publishedTo" />
+          </label>
+          <div class="filter-actions">
+            <button type="button" class="text-button" (click)="resetFilters()">Effacer</button>
+            <button type="button" class="text-button accent" (click)="rescan()">
+              <svg lucideRefreshCw aria-hidden="true" [size]="16"></svg>
+              <span>Rescanner</span>
+            </button>
+          </div>
+        </div>
+      }
+    </form>
+  </section>
+
+  <section class="section-title">
+    <span>{{ total() }} livre{{ total() > 1 ? 's' : '' }}</span>
+    <h1>{{ sectionTitle() }}</h1>
+  </section>
+
+  @if (error()) {
+    <p class="notice error" role="alert">{{ error() }}</p>
+  }
+
+  @if (isLoading()) {
+    <p class="notice">Chargement...</p>
+  } @else if (books().length === 0) {
+    <p class="notice">Aucun livre trouvé.</p>
+  } @else {
+    <section class="book-list" aria-label="Livres">
+      @for (book of books(); track book.id) {
+        <article class="book-row">
+          <span class="book-marker" aria-hidden="true">
+            <svg lucideHeart [size]="28"></svg>
+          </span>
+
+          <a class="book-link" [routerLink]="['/books', book.id]">
+            <span class="cover" aria-hidden="true">
+              <span>{{ bookInitial(book) }}</span>
+            </span>
+
+            <span class="book-copy">
+              <strong>{{ book.title }}</strong>
+              <span class="authors">Par <b>{{ formatAuthors(book) }}</b></span>
+              <small>{{ formatMeta(book) }}</small>
+
+              @if (primaryGenre(book); as genre) {
+                <span class="genre-chip">
+                  <svg lucideTag aria-hidden="true" [size]="14"></svg>
+                  {{ genre }}
+                </span>
+              } @else {
+                <span class="genre-chip muted">
+                  <svg lucideBookOpen aria-hidden="true" [size]="14"></svg>
+                  {{ book.format.toUpperCase() }}
+                </span>
+              }
+            </span>
+          </a>
+        </article>
+      }
+    </section>
+  }
+
+  <footer class="app-footer">
+    <span>Mentions legales</span>
+    <span>Copyright © 2026 - Aquarius</span>
+  </footer>
+
+  <img class="decor-corner" src="/assets/petal-corner.svg" alt="" aria-hidden="true" />
+</main>

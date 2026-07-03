@@ -1,0 +1,42 @@
+<main class="login-shell">
+  <img class="ivy-corner" src="/assets/ivy-branch.svg" alt="" aria-hidden="true" />
+  <img class="decor-corner" src="/assets/petal-corner.svg" alt="" aria-hidden="true" />
+
+  <section class="brand" aria-label="Alexandrya">
+    <h1>Alexandrya</h1>
+    <img class="brand-mark" src="/assets/alexandrya-mark.svg" alt="" aria-hidden="true" />
+  </section>
+
+  <form class="login-panel" [formGroup]="form" (ngSubmit)="submit()">
+    <label class="field">
+      <span class="sr-only">Email</span>
+      <svg lucideMail aria-hidden="true" [size]="18"></svg>
+      <input type="email" autocomplete="email" formControlName="email" placeholder="Email" />
+    </label>
+
+    <label class="field">
+      <span class="sr-only">Mot de passe</span>
+      <svg lucideLockKeyhole aria-hidden="true" [size]="18"></svg>
+      <input type="password" autocomplete="current-password" formControlName="password" placeholder="Mot de passe" />
+    </label>
+
+    <label class="remember">
+      <input type="checkbox" formControlName="remember" />
+      <span>Se souvenir de moi</span>
+    </label>
+
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+
+    <button type="submit" [disabled]="isSubmitting()">
+      <svg lucideLogIn aria-hidden="true" [size]="18"></svg>
+      <span>{{ isSubmitting() ? 'Connexion...' : 'Se connecter' }}</span>
+    </button>
+  </form>
+
+  <footer class="app-footer">
+    <span>Mentions legales</span>
+    <span>Copyright © 2026 - Aquarius</span>
+  </footer>
+</main>

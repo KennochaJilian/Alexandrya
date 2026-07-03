@@ -1,0 +1,9 @@
+[
+  {
+    "id": "alex",
+    "name": "Alex",
+    "email": "alex@example.com",
+    "password": "change-me-in-local-dev-only",
+    "kindleEmail": "alex_123@kindle.com"
+  }
+]
