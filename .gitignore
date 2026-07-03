@@ -4,8 +4,7 @@ dist/
 .DS_Store
 
 backend/dist/
-backend/data/users.json
-backend/data/books.json
+backend/data/*.json
 
 frontend/dist/
 frontend/.angular/

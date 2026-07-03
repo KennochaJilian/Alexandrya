@@ -1,27 +1,17 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { z } from 'zod';
+import { type Types } from 'mongoose';
 import { config } from '../config.js';
+import { AuthorModel } from '../db/models/author.model.js';
+import { BookModel, type BookRecord } from '../db/models/book.model.js';
+import { GenreModel } from '../db/models/genre.model.js';
 import { HttpError } from '../errors.js';
 import type { Book, BookSearchFilters, PublicBook } from '../models/book.js';
+import { slugify } from '../utils/slug.js';
+import { readEbookMetadata } from './ebook-metadata.service.js';
 
 const ebookExtensions = new Set(['.azw', '.azw3', '.epub', '.mobi', '.pdf', '.txt']);
-
-const metadataSchema = z.array(z.object({
-  id: z.string().optional(),
-  relativePath: z.string().min(1),
-  title: z.string().optional(),
-  authors: z.array(z.string()).optional(),
-  genres: z.array(z.string()).optional(),
-  publishedDate: z.string().optional(),
-  description: z.string().optional(),
-  language: z.string().optional()
-}));
-
-type BookMetadata = z.infer<typeof metadataSchema>[number];
-
-let cache: Book[] | null = null;
 
 function normalizeRelativePath(value: string): string {
   return value.replaceAll('\\', '/');
@@ -42,7 +32,13 @@ function parseFileName(fileName: string) {
   const parts = withoutYear.split(/\s+-\s+/);
 
   if (parts.length >= 2) {
-    const [author, ...titleParts] = parts;
+    const author = config.ebookFilenamePattern === 'author-title'
+      ? parts[0]
+      : parts.at(-1);
+    const titleParts = config.ebookFilenamePattern === 'author-title'
+      ? parts.slice(1)
+      : parts.slice(0, -1);
+
     return {
       title: titleParts.join(' - '),
       authors: author ? [author] : [],
@@ -64,15 +60,6 @@ async function fileExists(filePath: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-async function readMetadata(): Promise<BookMetadata[]> {
-  if (!(await fileExists(config.metadataPath))) {
-    return [];
-  }
-
-  const raw = await fs.readFile(config.metadataPath, 'utf8');
-  return metadataSchema.parse(JSON.parse(raw));
 }
 
 async function walkEbooks(directory: string): Promise<string[]> {
@@ -98,111 +85,169 @@ async function walkEbooks(directory: string): Promise<string[]> {
   return files.flat();
 }
 
-function toPublicBook(book: Book): PublicBook {
-  const { filePath: _filePath, ...publicBook } = book;
-  return publicBook;
+function unique(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 
-async function loadBooks(): Promise<Book[]> {
-  const metadata = await readMetadata();
-  const metadataByPath = new Map(
-    metadata.map((item) => [normalizeRelativePath(item.relativePath), item])
-  );
+async function upsertAuthors(names: string[]) {
+  const docs = await Promise.all(unique(names).map((name) => AuthorModel.findOneAndUpdate(
+    { slug: slugify(name) },
+    { $setOnInsert: { name, slug: slugify(name) } },
+    { upsert: true, new: true }
+  )));
+
+  return {
+    ids: docs.map((doc) => doc._id as Types.ObjectId),
+    names: docs.map((doc) => doc.name)
+  };
+}
+
+async function upsertGenres(names: string[]) {
+  const docs = await Promise.all(unique(names).map((name) => GenreModel.findOneAndUpdate(
+    { slug: slugify(name) },
+    { $setOnInsert: { name, slug: slugify(name) } },
+    { upsert: true, new: true }
+  )));
+
+  return {
+    ids: docs.map((doc) => doc._id as Types.ObjectId),
+    names: docs.map((doc) => doc.name)
+  };
+}
+
+function toPublicBook(book: BookRecord): PublicBook {
+  return {
+    id: book.publicId,
+    title: book.title,
+    authors: book.authorNames,
+    genres: book.genreNames,
+    publishedDate: book.publishedDate,
+    description: book.description,
+    language: book.language,
+    format: book.format,
+    fileName: book.fileName,
+    relativePath: book.relativePath,
+    sizeBytes: book.sizeBytes
+  };
+}
+
+function toBookWithFile(book: BookRecord): Book {
+  return {
+    ...toPublicBook(book),
+    filePath: book.filePath
+  };
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function textRegex(value: string): RegExp {
+  return new RegExp(escapeRegex(value.trim()), 'i');
+}
+
+function buildQuery(filters: BookSearchFilters): Record<string, unknown> {
+  const and: Record<string, unknown>[] = [];
+
+  if (filters.q?.trim()) {
+    const search = textRegex(filters.q);
+    and.push({
+      $or: [
+        { title: search },
+        { authorNames: search },
+        { genreNames: search },
+        { publishedDate: search },
+        { description: search },
+        { fileName: search }
+      ]
+    });
+  }
+
+  if (filters.title?.trim()) {
+    and.push({ title: textRegex(filters.title) });
+  }
+
+  if (filters.author?.trim()) {
+    and.push({ authorNames: textRegex(filters.author) });
+  }
+
+  if (filters.genre?.trim()) {
+    and.push({ genreNames: textRegex(filters.genre) });
+  }
+
+  if (filters.publishedFrom || filters.publishedTo) {
+    const range: Record<string, string> = {};
+
+    if (filters.publishedFrom) {
+      range.$gte = filters.publishedFrom;
+    }
+
+    if (filters.publishedTo) {
+      range.$lte = filters.publishedTo;
+    }
+
+    and.push({ publishedDate: range });
+  }
+
+  return and.length ? { $and: and } : {};
+}
+
+export async function refreshLibrary(): Promise<PublicBook[]> {
   const ebookFiles = await walkEbooks(config.ebookRoot);
 
-  const books = await Promise.all(ebookFiles.map(async (filePath) => {
+  await Promise.all(ebookFiles.map(async (filePath) => {
     const relativePath = normalizeRelativePath(path.relative(config.ebookRoot, filePath));
     const fileName = path.basename(filePath);
     const stats = await fs.stat(filePath);
     const inferred = parseFileName(fileName);
-    const metadataItem = metadataByPath.get(relativePath);
+    const embeddedMetadata = await readEbookMetadata(filePath);
+    const title = embeddedMetadata.title ?? inferred.title;
+    const authors = embeddedMetadata.authors.length ? embeddedMetadata.authors : inferred.authors;
+    const genres = embeddedMetadata.genres;
+    const publishedDate = embeddedMetadata.publishedDate ?? inferred.publishedDate;
+    const authorRefs = await upsertAuthors(authors);
+    const genreRefs = await upsertGenres(genres);
 
-    return {
-      id: metadataItem?.id ?? createId(relativePath),
-      title: metadataItem?.title ?? inferred.title,
-      authors: metadataItem?.authors ?? inferred.authors,
-      genres: metadataItem?.genres ?? [],
-      publishedDate: metadataItem?.publishedDate ?? inferred.publishedDate,
-      description: metadataItem?.description,
-      language: metadataItem?.language,
-      format: path.extname(fileName).slice(1).toLowerCase(),
-      fileName,
-      relativePath,
-      filePath,
-      sizeBytes: stats.size
-    } satisfies Book;
+    await BookModel.findOneAndUpdate(
+      { relativePath },
+      {
+        $set: {
+          title,
+          authors: authorRefs.ids,
+          authorNames: authorRefs.names,
+          genres: genreRefs.ids,
+          genreNames: genreRefs.names,
+          publishedDate,
+          description: embeddedMetadata.description,
+          language: embeddedMetadata.language,
+          format: path.extname(fileName).slice(1).toLowerCase(),
+          fileName,
+          relativePath,
+          filePath,
+          sizeBytes: stats.size,
+          lastScannedAt: new Date()
+        },
+        $setOnInsert: {
+          publicId: createId(relativePath)
+        }
+      },
+      { upsert: true, new: true }
+    );
   }));
 
-  return books.sort((left, right) => left.title.localeCompare(right.title, 'fr'));
-}
-
-export async function refreshLibrary(): Promise<PublicBook[]> {
-  cache = await loadBooks();
-  return cache.map(toPublicBook);
-}
-
-async function getLibrary(): Promise<Book[]> {
-  cache ??= await loadBooks();
-  return cache;
-}
-
-function includes(value: string | undefined, search: string | undefined): boolean {
-  if (!search) {
-    return true;
-  }
-
-  return value?.toLowerCase().includes(search.toLowerCase()) ?? false;
-}
-
-function matchesPublishedDate(bookDate: string | undefined, from?: string, to?: string): boolean {
-  if (!from && !to) {
-    return true;
-  }
-
-  if (!bookDate) {
-    return false;
-  }
-
-  if (from && bookDate < from) {
-    return false;
-  }
-
-  return !(to && bookDate > to);
-}
-
-function matchesQuery(book: Book, query: string | undefined): boolean {
-  if (!query) {
-    return true;
-  }
-
-  const normalized = query.toLowerCase();
-  const values = [
-    book.title,
-    book.authors.join(' '),
-    book.genres.join(' '),
-    book.publishedDate,
-    book.description,
-    book.fileName
-  ];
-
-  return values.some((value) => value?.toLowerCase().includes(normalized));
+  return searchBooks({});
 }
 
 export async function searchBooks(filters: BookSearchFilters): Promise<PublicBook[]> {
-  const books = await getLibrary();
+  const books = await BookModel.find(buildQuery(filters))
+    .sort({ updatedAt: -1, title: 1 })
+    .lean();
 
-  return books
-    .filter((book) => matchesQuery(book, filters.q))
-    .filter((book) => includes(book.title, filters.title))
-    .filter((book) => includes(book.authors.join(' '), filters.author))
-    .filter((book) => includes(book.genres.join(' '), filters.genre))
-    .filter((book) => matchesPublishedDate(book.publishedDate, filters.publishedFrom, filters.publishedTo))
-    .map(toPublicBook);
+  return books.map(toPublicBook);
 }
 
 export async function getBook(id: string): Promise<PublicBook> {
-  const books = await getLibrary();
-  const book = books.find((candidate) => candidate.id === id);
+  const book = await BookModel.findOne({ publicId: id }).lean();
 
   if (!book) {
     throw new HttpError(404, 'BOOK_NOT_FOUND', 'Livre introuvable.');
@@ -212,12 +257,11 @@ export async function getBook(id: string): Promise<PublicBook> {
 }
 
 export async function getBookFile(id: string): Promise<Book> {
-  const books = await getLibrary();
-  const book = books.find((candidate) => candidate.id === id);
+  const book = await BookModel.findOne({ publicId: id }).lean();
 
   if (!book) {
     throw new HttpError(404, 'BOOK_NOT_FOUND', 'Livre introuvable.');
   }
 
-  return book;
+  return toBookWithFile(book);
 }

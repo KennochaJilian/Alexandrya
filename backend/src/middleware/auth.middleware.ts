@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { HttpError } from '../errors.js';
 import { verifyToken } from '../services/auth.service.js';
 
-export function requireAuth(req: Request, _res: Response, next: NextFunction) {
+export async function requireAuth(req: Request, _res: Response, next: NextFunction) {
   const authorization = req.header('authorization');
 
   if (!authorization?.startsWith('Bearer ')) {
@@ -11,7 +11,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   }
 
   try {
-    req.user = verifyToken(authorization.slice('Bearer '.length));
+    req.user = await verifyToken(authorization.slice('Bearer '.length));
     next();
   } catch (error) {
     next(error);
