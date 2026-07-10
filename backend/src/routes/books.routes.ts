@@ -10,7 +10,9 @@ const searchSchema = z.object({
   author: z.string().optional(),
   genre: z.string().optional(),
   publishedFrom: z.string().optional(),
-  publishedTo: z.string().optional()
+  publishedTo: z.string().optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional()
 });
 const idSchema = z.string().min(1);
 
@@ -18,8 +20,7 @@ export const booksRouter = Router();
 
 booksRouter.get('/', asyncHandler(async (req, res) => {
   const filters = searchSchema.parse(req.query);
-  const books = await searchBooks(filters);
-  res.json({ books, total: books.length });
+  res.json(await searchBooks(filters));
 }));
 
 booksRouter.get('/:id', asyncHandler(async (req, res) => {

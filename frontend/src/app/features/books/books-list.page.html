@@ -123,6 +123,25 @@
         </article>
       }
     </section>
+
+    @if (totalPages() > 1) {
+      <nav class="pagination" aria-label="Pagination">
+        <button type="button" class="page-button" [disabled]="!canGoPrevious()" (click)="goToPreviousPage()">
+          <svg lucideChevronLeft aria-hidden="true" [size]="18"></svg>
+          <span>Precedent</span>
+        </button>
+
+        <span class="page-status">
+          <b>{{ pageStart() }}-{{ pageEnd() }}</b> sur {{ total() }}
+          <small>Page {{ page() }} / {{ totalPages() }}</small>
+        </span>
+
+        <button type="button" class="page-button" [disabled]="!canGoNext()" (click)="goToNextPage()">
+          <span>Suivant</span>
+          <svg lucideChevronRight aria-hidden="true" [size]="18"></svg>
+        </button>
+      </nav>
+    }
   }
 
   <footer class="app-footer">

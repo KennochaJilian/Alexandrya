@@ -32,6 +32,9 @@ export interface Book {
 export interface BookListResponse {
   books: Book[];
   total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 export interface BookResponse {
@@ -45,6 +48,8 @@ export interface BookFilters {
   genre?: string;
   publishedFrom?: string;
   publishedTo?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface KindleSendResponse {

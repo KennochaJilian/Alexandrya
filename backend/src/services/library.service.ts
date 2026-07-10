@@ -7,13 +7,15 @@ import { AuthorModel } from '../db/models/author.model.js';
 import { BookModel, type BookRecord } from '../db/models/book.model.js';
 import { GenreModel } from '../db/models/genre.model.js';
 import { HttpError } from '../errors.js';
-import type { Book, BookSearchFilters, PublicBook } from '../models/book.js';
+import type { Book, BookSearchFilters, BookSearchResult, PublicBook } from '../models/book.js';
 import { slugify } from '../utils/slug.js';
 import { lookupBookCover } from './cover-lookup.service.js';
 import { type EmbeddedCoverImage, readEbookMetadata } from './ebook-metadata.service.js';
 import { indexBooksInTypesense, searchBooksInTypesense } from './typesense.service.js';
 
 const ebookExtensions = new Set(['.azw', '.azw3', '.epub', '.mobi', '.pdf', '.txt']);
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
 
 function normalizeRelativePath(value: string): string {
   return value.replaceAll('\\', '/');
@@ -209,6 +211,38 @@ function buildQuery(filters: BookSearchFilters): Record<string, unknown> {
   return and.length ? { $and: and } : {};
 }
 
+function normalizePagination(filters: BookSearchFilters): { page: number; pageSize: number; skip: number } {
+  const page = Math.max(1, Math.trunc(filters.page ?? 1));
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Math.trunc(filters.pageSize ?? DEFAULT_PAGE_SIZE)));
+
+  return {
+    page,
+    pageSize,
+    skip: (page - 1) * pageSize
+  };
+}
+
+function toSearchResult(books: PublicBook[], total: number, page: number, pageSize: number): BookSearchResult {
+  return {
+    books,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize)
+  };
+}
+
+function paginateBooks(books: PublicBook[], filters: BookSearchFilters): BookSearchResult {
+  const { page, pageSize, skip } = normalizePagination(filters);
+
+  return toSearchResult(
+    books.slice(skip, skip + pageSize),
+    books.length,
+    page,
+    pageSize
+  );
+}
+
 export async function refreshLibrary(): Promise<PublicBook[]> {
   const ebookFiles = await walkEbooks(config.ebookRoot);
 
@@ -268,23 +302,23 @@ export async function refreshLibrary(): Promise<PublicBook[]> {
     );
   }));
 
-  const books = await searchBooksInMongo({});
+  const books = await findBooksInMongo({});
   await indexBooksInTypesense(books);
 
   return books;
 }
 
-export async function searchBooks(filters: BookSearchFilters): Promise<PublicBook[]> {
+export async function searchBooks(filters: BookSearchFilters): Promise<BookSearchResult> {
   const typesenseBooks = await searchBooksInTypesense(filters);
 
   if (typesenseBooks) {
-    return typesenseBooks;
+    return paginateBooks(typesenseBooks, filters);
   }
 
   return searchBooksInMongo(filters);
 }
 
-async function searchBooksInMongo(filters: BookSearchFilters): Promise<PublicBook[]> {
+async function findBooksInMongo(filters: BookSearchFilters): Promise<PublicBook[]> {
   const books = await BookModel.find(buildQuery(filters))
     .sort({ updatedAt: -1, title: 1 })
     .lean();
@@ -292,8 +326,23 @@ async function searchBooksInMongo(filters: BookSearchFilters): Promise<PublicBoo
   return books.map(toPublicBook);
 }
 
+async function searchBooksInMongo(filters: BookSearchFilters): Promise<BookSearchResult> {
+  const query = buildQuery(filters);
+  const { page, pageSize, skip } = normalizePagination(filters);
+  const [books, total] = await Promise.all([
+    BookModel.find(query)
+      .sort({ updatedAt: -1, title: 1 })
+      .skip(skip)
+      .limit(pageSize)
+      .lean(),
+    BookModel.countDocuments(query)
+  ]);
+
+  return toSearchResult(books.map(toPublicBook), total, page, pageSize);
+}
+
 export async function syncSearchIndex(): Promise<{ total: number; indexed: boolean }> {
-  const books = await searchBooksInMongo({});
+  const books = await findBooksInMongo({});
   const indexed = await indexBooksInTypesense(books);
 
   return {

@@ -24,4 +24,14 @@ export interface BookSearchFilters {
   genre?: string;
   publishedFrom?: string;
   publishedTo?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface BookSearchResult {
+  books: PublicBook[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
