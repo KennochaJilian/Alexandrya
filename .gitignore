@@ -5,6 +5,7 @@ dist/
 
 backend/dist/
 backend/data/*.json
+backend/data/covers/
 
 frontend/dist/
 frontend/.angular/

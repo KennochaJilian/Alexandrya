@@ -30,7 +30,11 @@
     } @else if (book(); as book) {
       <section class="book-hero">
         <span class="cover" aria-hidden="true">
-          <span>{{ bookInitial(book) }}</span>
+          @if (coverSrc(book); as coverUrl) {
+            <img [src]="coverUrl" alt="" referrerpolicy="no-referrer" />
+          } @else {
+            <span>{{ bookInitial(book) }}</span>
+          }
         </span>
 
         <div class="hero-copy">

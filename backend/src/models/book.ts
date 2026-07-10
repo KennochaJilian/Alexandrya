@@ -6,6 +6,8 @@ export interface Book {
   publishedDate?: string;
   description?: string;
   language?: string;
+  coverUrl?: string;
+  coverSource?: string;
   format: string;
   fileName: string;
   relativePath: string;

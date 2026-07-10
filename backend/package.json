@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "hash-password": "tsx scripts/hash-password.ts",
     "seed:user": "tsx scripts/seed-user.ts",
-    "library:rescan": "tsx scripts/rescan-library.ts"
+    "library:rescan": "tsx scripts/rescan-library.ts",
+    "search:sync": "tsx scripts/sync-search.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -21,6 +22,7 @@
     "jszip": "^3.10.1",
     "mongoose": "^9.7.3",
     "nodemailer": "^9.0.3",
+    "typesense": "^3.0.6",
     "zod": "^4.1.13"
   },
   "devDependencies": {

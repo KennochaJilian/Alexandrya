@@ -13,6 +13,7 @@ import {
 import { readApiError } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
 import { BooksService } from '../../core/books.service';
+import { resolveCoverUrl } from '../../core/cover-url';
 import type { Book } from '../../core/models';
 
 @Component({
@@ -90,6 +91,10 @@ export class BookDetailPage {
 
   primaryGenre(book: Book): string | null {
     return book.genres[0] ?? null;
+  }
+
+  coverSrc(book: Book): string | undefined {
+    return resolveCoverUrl(book.coverUrl);
   }
 
   formatAuthors(book: Book): string {

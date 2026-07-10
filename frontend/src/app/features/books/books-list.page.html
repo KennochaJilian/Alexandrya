@@ -92,7 +92,11 @@
 
           <a class="book-link" [routerLink]="['/books', book.id]">
             <span class="cover" aria-hidden="true">
-              <span>{{ bookInitial(book) }}</span>
+              @if (coverSrc(book); as coverUrl) {
+                <img [src]="coverUrl" alt="" loading="lazy" referrerpolicy="no-referrer" />
+              } @else {
+                <span>{{ bookInitial(book) }}</span>
+              }
             </span>
 
             <span class="book-copy">

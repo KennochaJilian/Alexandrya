@@ -10,6 +10,13 @@ export interface EbookMetadata {
   publishedDate?: string;
   description?: string;
   language?: string;
+  coverImage?: EmbeddedCoverImage;
+}
+
+export interface EmbeddedCoverImage {
+  bytes: Buffer;
+  extension: string;
+  mediaType?: string;
 }
 
 const xmlParser = new XMLParser({
@@ -124,6 +131,66 @@ function parseOpf(opfXml: string): EbookMetadata {
   };
 }
 
+function fileExtensionFromMediaType(mediaType: string | undefined, href: string | undefined): string {
+  if (mediaType === 'image/png') {
+    return 'png';
+  }
+
+  if (mediaType === 'image/webp') {
+    return 'webp';
+  }
+
+  if (mediaType === 'image/gif') {
+    return 'gif';
+  }
+
+  if (mediaType === 'image/jpeg' || mediaType === 'image/jpg') {
+    return 'jpg';
+  }
+
+  const extension = href ? path.extname(href).replace('.', '').toLowerCase() : '';
+  return extension || 'jpg';
+}
+
+function findCoverHref(opfXml: string, rootfilePath: string): { href: string; mediaType?: string } | undefined {
+  const parsed = xmlParser.parse(opfXml) as {
+    package?: {
+      metadata?: {
+        meta?: unknown;
+      };
+      manifest?: {
+        item?: unknown;
+      };
+    };
+  };
+  const metadata = parsed.package?.metadata ?? {};
+  const manifestItems = asArray(parsed.package?.manifest?.item) as Array<{
+    '@_id'?: string;
+    '@_href'?: string;
+    '@_media-type'?: string;
+    '@_properties'?: string;
+  }>;
+  const metadataItems = asArray(metadata.meta) as Array<{
+    '@_name'?: string;
+    '@_content'?: string;
+  }>;
+  const coverItemId = metadataItems.find((item) => item['@_name'] === 'cover')?.['@_content'];
+  const coverItem = manifestItems.find((item) => item['@_id'] === coverItemId)
+    ?? manifestItems.find((item) => item['@_properties']?.split(/\s+/).includes('cover-image'))
+    ?? manifestItems.find((item) => item['@_id']?.toLowerCase().includes('cover') && item['@_media-type']?.startsWith('image/'))
+    ?? manifestItems.find((item) => item['@_href']?.toLowerCase().includes('cover') && item['@_media-type']?.startsWith('image/'));
+
+  if (!coverItem?.['@_href']) {
+    return undefined;
+  }
+
+  const opfDirectory = path.posix.dirname(rootfilePath);
+  return {
+    href: path.posix.normalize(path.posix.join(opfDirectory, decodeURIComponent(coverItem['@_href']))),
+    mediaType: coverItem['@_media-type']
+  };
+}
+
 export async function readEbookMetadata(filePath: string): Promise<EbookMetadata> {
   if (path.extname(filePath).toLowerCase() !== '.epub') {
     return {
@@ -161,7 +228,19 @@ export async function readEbookMetadata(filePath: string): Promise<EbookMetadata
       };
     }
 
-    return parseOpf(opfXml);
+    const metadata = parseOpf(opfXml);
+    const coverHref = findCoverHref(opfXml, rootfilePath);
+    const coverFile = coverHref ? zip.file(coverHref.href) : undefined;
+
+    if (coverHref && coverFile) {
+      metadata.coverImage = {
+        bytes: await coverFile.async('nodebuffer'),
+        extension: fileExtensionFromMediaType(coverHref.mediaType, coverHref.href),
+        mediaType: coverHref.mediaType
+      };
+    }
+
+    return metadata;
   } catch {
     return {
       authors: [],

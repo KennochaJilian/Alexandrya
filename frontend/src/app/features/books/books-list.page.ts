@@ -17,6 +17,7 @@ import { catchError, debounceTime, finalize, of, startWith, switchMap } from 'rx
 import { readApiError } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
 import { BooksService } from '../../core/books.service';
+import { resolveCoverUrl } from '../../core/cover-url';
 import type { Book, BookFilters, BookListResponse } from '../../core/models';
 
 @Component({
@@ -139,6 +140,10 @@ export class BooksListPage {
 
   bookInitial(book: Book): string {
     return book.title.trim().slice(0, 1).toUpperCase() || 'A';
+  }
+
+  coverSrc(book: Book): string | undefined {
+    return resolveCoverUrl(book.coverUrl);
   }
 
   private cleanFilters(filters: Partial<Record<keyof BookFilters, string>>): BookFilters {

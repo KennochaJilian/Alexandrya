@@ -8,16 +8,28 @@ Application mobile-first pour gerer une bibliotheque d'ebooks stockee dans un do
 - Backend: Node.js, Express, TypeScript
 - Authentification: email + mot de passe, sans inscription publique
 - Stockage: MongoDB avec collections `users`, `books`, `authors`, `genres`
+- Recherche: Typesense optionnel, avec fallback MongoDB
 - Import: scan du dossier `EBOOK_ROOT` et upsert des livres en base
 - Envoi Kindle: email SMTP vers l'adresse `@kindle.com` de l'utilisateur
 
 ## Demarrage
 
-Lancer MongoDB localement avant l'API. Exemple avec Docker:
+Lancer l'infra locale avant l'API:
 
 ```bash
-docker run --name alexandrya-mongo -p 27017:27017 -d mongo:7
+npm run infra:up
 ```
+
+Si tu avais deja lance MongoDB ou Typesense a la main avec `docker run`, supprimer d'abord les anciens conteneurs:
+
+```bash
+docker rm -f alexandrya-mongo alexandrya-typesense
+```
+
+Cette commande demarre:
+
+- MongoDB sur `localhost:27017`
+- Typesense sur `localhost:8108`
 
 ```bash
 npm install
@@ -39,6 +51,10 @@ EBOOK_FILENAME_PATTERN=title-author
 JWT_SECRET=une-valeur-longue-et-aleatoire
 MONGO_URI=mongodb://127.0.0.1:27017/alexandrya
 MONGO_DB_NAME=alexandrya
+COVER_LOOKUP_ENABLED=true
+GOOGLE_BOOKS_API_KEY=
+TYPESENSE_ENABLED=true
+TYPESENSE_API_KEY=xyz
 ```
 
 ## Utilisateurs
@@ -71,6 +87,45 @@ Si ta source est en `Auteur - Titre (2020).epub`, regler `EBOOK_FILENAME_PATTERN
 
 Depuis l'interface, le bouton `Rescanner` appelle aussi l'import.
 
+## Recherche Typesense
+
+Typesense est optionnel. Si `TYPESENSE_ENABLED=false`, ou si le serveur n'est pas joignable, l'API garde la recherche MongoDB existante.
+Avec `npm run infra:up`, Typesense est lance avec la cle locale `xyz`; `backend/.env` doit donc garder `TYPESENSE_API_KEY=xyz`, ou utiliser la meme valeur que ton environnement Docker.
+
+Pour l'activer:
+
+```env
+TYPESENSE_ENABLED=true
+TYPESENSE_HOST=127.0.0.1
+TYPESENSE_PORT=8108
+TYPESENSE_PROTOCOL=http
+TYPESENSE_API_KEY=xyz
+TYPESENSE_COLLECTION=books
+```
+
+Le rescan indexe les livres dans Typesense apres l'import MongoDB:
+
+```bash
+npm run library:rescan --workspace backend
+```
+
+Pour reconstruire seulement l'index de recherche depuis MongoDB:
+
+```bash
+npm run search:sync --workspace backend
+```
+
+## Couvertures
+
+Pendant le scan, le backend tente de trouver une couverture en ligne:
+
+1. Couverture embarquee dans l'EPUB, stockee dans `backend/data/covers`
+2. Google Books API, via `volumes?q=...`
+3. Open Library Search + Covers API en fallback
+
+`GOOGLE_BOOKS_API_KEY` est optionnelle pour les donnees publiques, mais recommandee pour les quotas et le suivi.
+Si tu veux des scans totalement hors ligne, regler `COVER_LOOKUP_ENABLED=false`; les couvertures embarquees dans les EPUB seront quand meme recuperees.
+
 ## Envoi vers Kindle
 
 Configurer les variables SMTP dans `backend/.env`:
@@ -91,7 +146,11 @@ Chaque utilisateur doit avoir un `kindleEmail` en base.
 
 ```bash
 npm run build
+npm run infra:up
+npm run infra:down
+npm run infra:logs
 npm test --workspace frontend -- --watch=false
 npm run seed:user --workspace backend -- email@example.com "mot-de-passe" "Nom" email@kindle.com
 npm run library:rescan --workspace backend
+npm run search:sync --workspace backend
 ```

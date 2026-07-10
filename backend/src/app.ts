@@ -14,6 +14,10 @@ export function createApp() {
     credentials: false
   }));
   app.use(express.json({ limit: '1mb' }));
+  app.use(config.coverPublicPath, express.static(config.coverStoragePath, {
+    immutable: true,
+    maxAge: '30d'
+  }));
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });

@@ -25,6 +25,7 @@ export class LoginPage {
   readonly error = signal<string | null>(null);
 
   submit() {
+    console.log('Form submitted:', this.form.getRawValue());
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;

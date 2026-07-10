@@ -9,7 +9,9 @@ import { GenreModel } from '../db/models/genre.model.js';
 import { HttpError } from '../errors.js';
 import type { Book, BookSearchFilters, PublicBook } from '../models/book.js';
 import { slugify } from '../utils/slug.js';
-import { readEbookMetadata } from './ebook-metadata.service.js';
+import { lookupBookCover } from './cover-lookup.service.js';
+import { type EmbeddedCoverImage, readEbookMetadata } from './ebook-metadata.service.js';
+import { indexBooksInTypesense, searchBooksInTypesense } from './typesense.service.js';
 
 const ebookExtensions = new Set(['.azw', '.azw3', '.epub', '.mobi', '.pdf', '.txt']);
 
@@ -115,6 +117,19 @@ async function upsertGenres(names: string[]) {
   };
 }
 
+async function saveEmbeddedCover(publicId: string, coverImage: EmbeddedCoverImage) {
+  await fs.mkdir(config.coverStoragePath, { recursive: true });
+
+  const extension = coverImage.extension.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'jpg';
+  const fileName = `${publicId}.${extension}`;
+  await fs.writeFile(path.join(config.coverStoragePath, fileName), coverImage.bytes);
+
+  return {
+    coverUrl: `${config.coverPublicPath}/${fileName}`,
+    coverSource: 'embedded-epub'
+  };
+}
+
 function toPublicBook(book: BookRecord): PublicBook {
   return {
     id: book.publicId,
@@ -127,7 +142,9 @@ function toPublicBook(book: BookRecord): PublicBook {
     format: book.format,
     fileName: book.fileName,
     relativePath: book.relativePath,
-    sizeBytes: book.sizeBytes
+    sizeBytes: book.sizeBytes,
+    coverUrl: book.coverUrl,
+    coverSource: book.coverSource
   };
 }
 
@@ -197,6 +214,7 @@ export async function refreshLibrary(): Promise<PublicBook[]> {
 
   await Promise.all(ebookFiles.map(async (filePath) => {
     const relativePath = normalizeRelativePath(path.relative(config.ebookRoot, filePath));
+    const publicId = createId(relativePath);
     const fileName = path.basename(filePath);
     const stats = await fs.stat(filePath);
     const inferred = parseFileName(fileName);
@@ -207,43 +225,81 @@ export async function refreshLibrary(): Promise<PublicBook[]> {
     const publishedDate = embeddedMetadata.publishedDate ?? inferred.publishedDate;
     const authorRefs = await upsertAuthors(authors);
     const genreRefs = await upsertGenres(genres);
+    const existingBook = await BookModel.findOne({ relativePath }, { coverUrl: 1, coverSource: 1 }).lean();
+    const cover = embeddedMetadata.coverImage
+      ? await saveEmbeddedCover(publicId, embeddedMetadata.coverImage)
+      : existingBook?.coverUrl
+      ? {
+          coverUrl: existingBook.coverUrl,
+          coverSource: existingBook.coverSource
+        }
+      : await lookupBookCover({ title, authors });
+    const updateSet: Partial<BookRecord> = {
+      title,
+      authors: authorRefs.ids,
+      authorNames: authorRefs.names,
+      genres: genreRefs.ids,
+      genreNames: genreRefs.names,
+      publishedDate,
+      description: embeddedMetadata.description,
+      language: embeddedMetadata.language,
+      format: path.extname(fileName).slice(1).toLowerCase(),
+      fileName,
+      relativePath,
+      filePath,
+      sizeBytes: stats.size,
+      lastScannedAt: new Date()
+    };
+
+    if (cover?.coverUrl) {
+      updateSet.coverUrl = cover.coverUrl;
+      updateSet.coverSource = cover.coverSource;
+    }
 
     await BookModel.findOneAndUpdate(
       { relativePath },
       {
-        $set: {
-          title,
-          authors: authorRefs.ids,
-          authorNames: authorRefs.names,
-          genres: genreRefs.ids,
-          genreNames: genreRefs.names,
-          publishedDate,
-          description: embeddedMetadata.description,
-          language: embeddedMetadata.language,
-          format: path.extname(fileName).slice(1).toLowerCase(),
-          fileName,
-          relativePath,
-          filePath,
-          sizeBytes: stats.size,
-          lastScannedAt: new Date()
-        },
+        $set: updateSet,
         $setOnInsert: {
-          publicId: createId(relativePath)
+          publicId
         }
       },
       { upsert: true, new: true }
     );
   }));
 
-  return searchBooks({});
+  const books = await searchBooksInMongo({});
+  await indexBooksInTypesense(books);
+
+  return books;
 }
 
 export async function searchBooks(filters: BookSearchFilters): Promise<PublicBook[]> {
+  const typesenseBooks = await searchBooksInTypesense(filters);
+
+  if (typesenseBooks) {
+    return typesenseBooks;
+  }
+
+  return searchBooksInMongo(filters);
+}
+
+async function searchBooksInMongo(filters: BookSearchFilters): Promise<PublicBook[]> {
   const books = await BookModel.find(buildQuery(filters))
     .sort({ updatedAt: -1, title: 1 })
     .lean();
 
   return books.map(toPublicBook);
+}
+
+export async function syncSearchIndex(): Promise<{ total: number; indexed: boolean }> {
+  const books = await searchBooksInMongo({});
+  const indexed = await indexBooksInTypesense(books);
+
+  return {
+    total: books.length,
+    indexed
+  };
 }
 
 export async function getBook(id: string): Promise<PublicBook> {

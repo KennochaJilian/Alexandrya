@@ -1,0 +1,32 @@
+name: alexandrya
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: alexandrya-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  typesense:
+    image: typesense/typesense:29.0
+    container_name: alexandrya-typesense
+    restart: unless-stopped
+    ports:
+      - "8108:8108"
+    volumes:
+      - typesense-data:/data
+    command:
+      - --data-dir
+      - /data
+      - --api-key
+      - ${TYPESENSE_API_KEY:-xyz}
+      - --listen-port
+      - "8108"
+      - --enable-cors
+
+volumes:
+  mongo-data:
+  typesense-data:

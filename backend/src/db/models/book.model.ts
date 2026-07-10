@@ -10,6 +10,8 @@ export interface BookRecord {
   publishedDate?: string;
   description?: string;
   language?: string;
+  coverUrl?: string;
+  coverSource?: string;
   format: string;
   fileName: string;
   relativePath: string;
@@ -55,6 +57,8 @@ const bookSchema = new Schema<BookRecord>({
   },
   description: String,
   language: String,
+  coverUrl: String,
+  coverSource: String,
   format: {
     type: String,
     required: true,
