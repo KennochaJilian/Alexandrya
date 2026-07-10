@@ -204,6 +204,60 @@ a {
   padding: 0 18px 36px;
 }
 
+.favorite-filter-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 2px solid var(--purple);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--purple);
+  cursor: pointer;
+}
+
+.favorite-filter-toggle:hover,
+.favorite-filter-toggle:focus-visible {
+  outline: none;
+  background: rgb(255 255 255 / 14%);
+}
+
+.favorite-filter-toggle.is-active {
+  background: var(--purple);
+  color: #ffffff;
+}
+
+.favorite-filter-toggle svg {
+  fill: transparent;
+}
+
+.favorite-filter-toggle.is-active svg {
+  fill: currentColor;
+}
+
+.favorite-button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.favorite-button svg {
+  fill: transparent;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.favorite-button.is-favorite svg {
+  fill: currentColor;
+  stroke-width: 0;
+}
+
+.favorite-button:focus-visible {
+  outline: 3px solid rgb(62 179 230 / 28%);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
 .page-button {
   display: inline-flex;
   align-items: center;

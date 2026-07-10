@@ -100,6 +100,48 @@
         <span>{{ isSubmitting() ? 'Enregistrement...' : 'Enregistrer' }}</span>
       </button>
     </form>
+
+    <section class="favorites-section">
+      <div class="section-heading">
+        <svg lucideHeart aria-hidden="true" [size]="20"></svg>
+        <h2>Mes favoris</h2>
+        <span>{{ favorites().length }}</span>
+      </div>
+
+      @if (favorites().length === 0) {
+        <p class="notice">Aucun favori pour le moment.</p>
+      } @else {
+        <div class="favorites-list">
+          @for (book of favorites(); track book.id) {
+            <article class="favorite-row">
+              <a class="favorite-link" [routerLink]="['/books', book.id]">
+                <span class="favorite-cover" aria-hidden="true">
+                  @if (coverSrc(book); as coverUrl) {
+                    <img [src]="coverUrl" alt="" loading="lazy" referrerpolicy="no-referrer" />
+                  } @else {
+                    <span>{{ bookInitial(book) }}</span>
+                  }
+                </span>
+
+                <span class="favorite-copy">
+                  <strong>{{ book.title }}</strong>
+                  <small>{{ formatAuthors(book) }}</small>
+                </span>
+              </a>
+
+              <button
+                type="button"
+                class="favorite-remove"
+                title="Retirer des favoris"
+                (click)="removeFavorite(book.id)"
+              >
+                <svg lucideHeart aria-hidden="true" [size]="22"></svg>
+              </button>
+            </article>
+          }
+        </div>
+      }
+    </section>
   </section>
 
   <footer class="app-footer">

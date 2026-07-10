@@ -139,6 +139,127 @@
   opacity: 0.72;
 }
 
+.favorites-section {
+  display: grid;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--purple);
+}
+
+.section-heading h2 {
+  flex: 1;
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.section-heading span {
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  min-height: 30px;
+  border-radius: 999px;
+  background: var(--purple-quiet);
+  color: var(--purple);
+  font-weight: 900;
+}
+
+.favorites-list {
+  display: grid;
+  gap: 10px;
+}
+
+.favorite-row {
+  display: grid;
+  grid-template-columns: 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.favorite-link {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.favorite-cover {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 66px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--purple);
+  color: #ffffff;
+}
+
+.favorite-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.favorite-cover span {
+  font-family: var(--font-title);
+  font-size: 2rem;
+}
+
+.favorite-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.favorite-copy strong,
+.favorite-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.favorite-copy strong {
+  color: var(--ink);
+  font-family: var(--font-title);
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+.favorite-copy small {
+  color: var(--gray);
+  font-weight: 700;
+}
+
+.favorite-remove {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--purple-soft);
+  cursor: pointer;
+}
+
+.favorite-remove svg {
+  fill: currentColor;
+  stroke-width: 0;
+}
+
 .app-footer {
   position: relative;
   z-index: 1;

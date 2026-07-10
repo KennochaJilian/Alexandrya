@@ -40,6 +40,17 @@
         <svg lucideSlidersHorizontal aria-hidden="true" [size]="22"></svg>
       </button>
 
+      <button
+        type="button"
+        class="favorite-filter-toggle"
+        title="Favoris uniquement"
+        [class.is-active]="favoritesOnly()"
+        [attr.aria-pressed]="favoritesOnly()"
+        (click)="toggleFavoritesOnly()"
+      >
+        <svg lucideHeart aria-hidden="true" [size]="22"></svg>
+      </button>
+
       @if (advancedOpen()) {
         <div class="advanced-filters">
           <label>
@@ -89,9 +100,16 @@
     <section class="book-list" aria-label="Livres">
       @for (book of books(); track book.id) {
         <article class="book-row">
-          <span class="book-marker" aria-hidden="true">
+          <button
+            type="button"
+            class="book-marker favorite-button"
+            [class.is-favorite]="favoriteIds().has(book.id)"
+            [attr.aria-pressed]="favoriteIds().has(book.id)"
+            [title]="favoriteIds().has(book.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+            (click)="toggleFavorite(book)"
+          >
             <svg lucideHeart [size]="28"></svg>
-          </span>
+          </button>
 
           <a class="book-link" [routerLink]="['/books', book.id]">
             <span class="cover" aria-hidden="true">

@@ -20,8 +20,25 @@ import { readApiError } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
 import { BooksService } from '../../core/books.service';
 import { resolveCoverUrl } from '../../core/cover-url';
+import { FavoritesService } from '../../core/favorites.service';
 import type { Book, BookFilters, BookListResponse } from '../../core/models';
 import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
+
+interface BooksSearchRequest {
+  filters: BookFilters;
+  page: number;
+  favoritesOnly: boolean;
+}
+
+interface BooksSearchFormValue {
+  q: string;
+  title: string;
+  author: string;
+  genre: string;
+  publishedFrom: string;
+  publishedTo: string;
+  favoritesOnly: boolean;
+}
 
 @Component({
   selector: 'app-books-list-page',
@@ -47,10 +64,12 @@ import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
 export class BooksListPage {
   private readonly booksService = inject(BooksService);
   private readonly auth = inject(AuthService);
-  private readonly searchRequests = new Subject<{ filters: BookFilters; page: number }>();
+  private readonly favoritesService = inject(FavoritesService);
+  private readonly searchRequests = new Subject<BooksSearchRequest>();
 
   readonly currentUser = this.auth.currentUser;
   readonly isAdmin = this.auth.isAdmin;
+  readonly favoriteIds = this.favoritesService.favoriteIds;
   readonly books = signal<Book[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
@@ -59,9 +78,10 @@ export class BooksListPage {
   readonly isLoading = signal(true);
   readonly error = signal<string | null>(null);
   readonly advancedOpen = signal(false);
+  readonly favoritesOnly = signal(false);
   readonly activeFilters = signal<BookFilters>({});
-  readonly hasActiveFilters = computed(() => Object.keys(this.activeFilters()).length > 0);
-  readonly sectionTitle = computed(() => this.hasActiveFilters() ? 'Résultats' : 'Derniers ajoutés');
+  readonly hasActiveFilters = computed(() => Object.keys(this.activeFilters()).length > 0 || this.favoritesOnly());
+  readonly sectionTitle = computed(() => this.favoritesOnly() ? 'Mes favoris' : this.hasActiveFilters() ? 'Résultats' : 'Derniers ajoutés');
   readonly canGoPrevious = computed(() => this.page() > 1 && !this.isLoading());
   readonly canGoNext = computed(() => this.page() < this.totalPages() && !this.isLoading());
   readonly pageStart = computed(() => this.total() ? ((this.page() - 1) * this.pageSize()) + 1 : 0);
@@ -73,14 +93,21 @@ export class BooksListPage {
     author: new FormControl('', { nonNullable: true }),
     genre: new FormControl('', { nonNullable: true }),
     publishedFrom: new FormControl('', { nonNullable: true }),
-    publishedTo: new FormControl('', { nonNullable: true })
+    publishedTo: new FormControl('', { nonNullable: true }),
+    favoritesOnly: new FormControl(false, { nonNullable: true })
   });
 
   constructor() {
     this.searchRequests.pipe(
-      switchMap(({ filters, page }) => {
+      switchMap(({ filters, page, favoritesOnly }) => {
         this.isLoading.set(true);
         this.error.set(null);
+
+        if (favoritesOnly) {
+          return of(this.searchFavoriteBooks(filters, page)).pipe(
+            finalize(() => this.isLoading.set(false))
+          );
+        }
 
         return this.booksService.searchBooks({
           ...filters,
@@ -115,9 +142,12 @@ export class BooksListPage {
       takeUntilDestroyed()
     ).subscribe((filters) => {
       const cleanFilters = this.cleanFilters(filters);
+      const favoritesOnly = Boolean(filters.favoritesOnly);
+
       this.activeFilters.set(cleanFilters);
+      this.favoritesOnly.set(favoritesOnly);
       this.page.set(1);
-      this.searchRequests.next({ filters: cleanFilters, page: 1 });
+      this.searchRequests.next({ filters: cleanFilters, page: 1, favoritesOnly });
     });
   }
 
@@ -136,8 +166,25 @@ export class BooksListPage {
       author: '',
       genre: '',
       publishedFrom: '',
-      publishedTo: ''
+      publishedTo: '',
+      favoritesOnly: false
     });
+  }
+
+  toggleFavoritesOnly() {
+    this.filters.controls.favoritesOnly.setValue(!this.filters.controls.favoritesOnly.value);
+  }
+
+  toggleFavorite(book: Book) {
+    this.favoritesService.toggle(book);
+
+    if (this.favoritesOnly()) {
+      this.searchRequests.next({
+        filters: this.activeFilters(),
+        page: this.page(),
+        favoritesOnly: true
+      });
+    }
   }
 
   goToPreviousPage() {
@@ -185,13 +232,91 @@ export class BooksListPage {
     this.page.set(nextPage);
     this.searchRequests.next({
       filters: this.activeFilters(),
-      page: nextPage
+      page: nextPage,
+      favoritesOnly: this.favoritesOnly()
     });
   }
 
-  private cleanFilters(filters: Partial<Record<keyof BookFilters, string>>): BookFilters {
+  private searchFavoriteBooks(filters: BookFilters, page: number): BookListResponse {
+    const filteredFavorites = this.favoritesService.favorites()
+      .filter((book) => this.matchesFilters(book, filters));
+    const pageSize = this.pageSize();
+    const total = filteredFavorites.length;
+    const totalPages = Math.ceil(total / pageSize);
+    const safePage = totalPages ? Math.min(Math.max(1, page), totalPages) : 1;
+    const start = (safePage - 1) * pageSize;
+
+    return {
+      books: filteredFavorites.slice(start, start + pageSize),
+      total,
+      page: safePage,
+      pageSize,
+      totalPages
+    };
+  }
+
+  private matchesFilters(book: Book, filters: BookFilters): boolean {
+    const query = filters.q?.trim();
+    const searchableText = [
+      book.title,
+      book.authors.join(' '),
+      book.genres.join(' '),
+      book.publishedDate,
+      book.fileName
+    ].join(' ');
+
+    return this.includesFilter(searchableText, query)
+      && this.includesFilter(book.title, filters.title)
+      && this.arrayIncludesFilter(book.authors, filters.author)
+      && this.arrayIncludesFilter(book.genres, filters.genre)
+      && this.matchesDateRange(book, filters);
+  }
+
+  private arrayIncludesFilter(values: string[], filter: string | undefined): boolean {
+    if (!filter?.trim()) {
+      return true;
+    }
+
+    return values.some((value) => this.includesFilter(value, filter));
+  }
+
+  private includesFilter(value: string | undefined, filter: string | undefined): boolean {
+    if (!filter?.trim()) {
+      return true;
+    }
+
+    return this.normalize(value ?? '').includes(this.normalize(filter));
+  }
+
+  private matchesDateRange(book: Book, filters: BookFilters): boolean {
+    if (!filters.publishedFrom && !filters.publishedTo) {
+      return true;
+    }
+
+    if (!book.publishedDate) {
+      return false;
+    }
+
+    if (filters.publishedFrom && book.publishedDate < filters.publishedFrom) {
+      return false;
+    }
+
+    return !(filters.publishedTo && book.publishedDate > filters.publishedTo);
+  }
+
+  private normalize(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private cleanFilters(filters: Partial<BooksSearchFormValue>): BookFilters {
+    const { favoritesOnly: _favoritesOnly, ...searchFilters } = filters;
+
     return Object.fromEntries(
-      Object.entries(filters)
+      Object.entries(searchFilters)
         .map(([key, value]) => [key, value?.trim()])
         .filter((entry): entry is [keyof BookFilters, string] => Boolean(entry[1]))
     ) as BookFilters;

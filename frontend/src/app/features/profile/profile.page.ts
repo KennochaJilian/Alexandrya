@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import {
   LucideArrowLeft,
   LucideCircleUser,
+  LucideHeart,
   LucideKeyRound,
   LucideLogOut,
   LucideSave,
@@ -13,7 +14,9 @@ import {
 } from '@lucide/angular';
 import { readApiError } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
-import type { UpdateProfileRequest } from '../../core/models';
+import { FavoritesService } from '../../core/favorites.service';
+import { resolveCoverUrl } from '../../core/cover-url';
+import type { Book, UpdateProfileRequest } from '../../core/models';
 import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
 
 @Component({
@@ -24,6 +27,7 @@ import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
     RouterLink,
     LucideArrowLeft,
     LucideCircleUser,
+    LucideHeart,
     LucideKeyRound,
     LucideLogOut,
     LucideSave,
@@ -36,9 +40,11 @@ import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
 })
 export class ProfilePage {
   private readonly auth = inject(AuthService);
+  private readonly favoritesService = inject(FavoritesService);
 
   readonly currentUser = this.auth.currentUser;
   readonly isAdmin = this.auth.isAdmin;
+  readonly favorites = this.favoritesService.favorites;
   readonly isSubmitting = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
@@ -106,5 +112,21 @@ export class ProfilePage {
 
   logout() {
     this.auth.logout();
+  }
+
+  removeFavorite(bookId: string) {
+    this.favoritesService.remove(bookId);
+  }
+
+  coverSrc(book: Book): string | undefined {
+    return resolveCoverUrl(book.coverUrl);
+  }
+
+  bookInitial(book: Book): string {
+    return book.title.trim().slice(0, 1).toUpperCase() || 'A';
+  }
+
+  formatAuthors(book: Book): string {
+    return book.authors.length ? book.authors.join(', ') : 'Auteur inconnu';
   }
 }
