@@ -17,7 +17,7 @@ variables:
   dockerRepository: 'codinaaranxa/alexandrya-api'
   frontendDistPath: 'frontend/dist/frontend/browser'
   frontendDeployPath: '/var/www/alexandrya'
-  deployFrontendToApache: 'false'
+  deployFrontendToApache: 'true'
 
 stages:
   - stage: build_test_publish
