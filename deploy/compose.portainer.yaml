@@ -1,0 +1,76 @@
+name: alexandrya
+
+services:
+  api:
+    image: ${ALEXANDRYA_API_IMAGE:-alexandrya-api:latest}
+    container_name: alexandrya-api
+    restart: unless-stopped
+    depends_on:
+      - mongo
+      - typesense
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-4000}:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://alexandrya.aquarius.irish}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      MONGO_URI: mongodb://mongo:27017/alexandrya
+      EBOOK_ROOT: /library
+      EBOOK_FILENAME_PATTERN: ${EBOOK_FILENAME_PATTERN:-title-author}
+      COVER_LOOKUP_ENABLED: ${COVER_LOOKUP_ENABLED:-true}
+      GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
+      COVER_STORAGE_PATH: /data/covers
+      COVER_PUBLIC_PATH: /covers
+      TYPESENSE_ENABLED: "true"
+      TYPESENSE_HOST: typesense
+      TYPESENSE_PORT: 8108
+      TYPESENSE_PROTOCOL: http
+      TYPESENSE_API_KEY: ${TYPESENSE_API_KEY:?TYPESENSE_API_KEY is required}
+      TYPESENSE_COLLECTION: ${TYPESENSE_COLLECTION:-books}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+    volumes:
+      - ${ALEXANDRYA_LIBRARY_PATH:-/srv/alexandrya/library}:/library:ro
+      - covers-data:/data/covers
+    networks:
+      - alexandrya-private
+
+  mongo:
+    image: mongo:7
+    container_name: alexandrya-mongo
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - alexandrya-private
+
+  typesense:
+    image: typesense/typesense:29.0
+    container_name: alexandrya-typesense
+    restart: unless-stopped
+    command:
+      - --data-dir
+      - /data
+      - --api-key
+      - ${TYPESENSE_API_KEY:?TYPESENSE_API_KEY is required}
+      - --listen-port
+      - "8108"
+      - --enable-cors
+    volumes:
+      - typesense-data:/data
+    networks:
+      - alexandrya-private
+
+networks:
+  alexandrya-private:
+    name: alexandrya-private
+
+volumes:
+  mongo-data:
+  typesense-data:
+  covers-data:

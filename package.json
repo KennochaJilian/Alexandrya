@@ -7,6 +7,7 @@
     "build": "npm run build --workspace backend && npm run build --workspace frontend",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
+    "docker:build:api": "docker build -f backend/Dockerfile -t alexandrya-api:local .",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
     "infra:logs": "docker compose logs -f",

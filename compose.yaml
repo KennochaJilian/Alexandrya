@@ -6,7 +6,7 @@ services:
     container_name: alexandrya-mongo
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongo-data:/data/db
 
@@ -15,7 +15,7 @@ services:
     container_name: alexandrya-typesense
     restart: unless-stopped
     ports:
-      - "8108:8108"
+      - "127.0.0.1:8108:8108"
     volumes:
       - typesense-data:/data
     command:
