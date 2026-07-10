@@ -17,3 +17,12 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     next(error);
   }
 }
+
+export function requireAdmin(req: Request, _res: Response, next: NextFunction) {
+  if (req.user?.role !== 'admin') {
+    next(new HttpError(403, 'ADMIN_REQUIRED', 'Acces administrateur requis.'));
+    return;
+  }
+
+  next();
+}

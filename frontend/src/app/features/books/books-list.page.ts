@@ -8,8 +8,8 @@ import {
   LucideCircleUser,
   LucideHeart,
   LucideLogOut,
-  LucideRefreshCw,
   LucideSearch,
+  LucideShield,
   LucideSlidersHorizontal,
   LucideTag
 } from '@lucide/angular';
@@ -19,6 +19,7 @@ import { AuthService } from '../../core/auth.service';
 import { BooksService } from '../../core/books.service';
 import { resolveCoverUrl } from '../../core/cover-url';
 import type { Book, BookFilters, BookListResponse } from '../../core/models';
+import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
 
 @Component({
   selector: 'app-books-list-page',
@@ -30,10 +31,11 @@ import type { Book, BookFilters, BookListResponse } from '../../core/models';
     LucideCircleUser,
     LucideHeart,
     LucideLogOut,
-    LucideRefreshCw,
     LucideSearch,
+    LucideShield,
     LucideSlidersHorizontal,
-    LucideTag
+    LucideTag,
+    LeafSpinnerComponent
   ],
   templateUrl: './books-list.page.html',
   styleUrl: './books-list.page.scss'
@@ -43,6 +45,7 @@ export class BooksListPage {
   private readonly auth = inject(AuthService);
 
   readonly currentUser = this.auth.currentUser;
+  readonly isAdmin = this.auth.isAdmin;
   readonly books = signal<Book[]>([]);
   readonly total = signal(0);
   readonly isLoading = signal(true);
@@ -102,21 +105,6 @@ export class BooksListPage {
       genre: '',
       publishedFrom: '',
       publishedTo: ''
-    });
-  }
-
-  rescan() {
-    this.isLoading.set(true);
-    this.booksService.rescan().subscribe({
-      next: (result) => {
-        this.books.set(result.books);
-        this.total.set(result.total);
-        this.isLoading.set(false);
-      },
-      error: (error: unknown) => {
-        this.error.set(readApiError(error));
-        this.isLoading.set(false);
-      }
     });
   }
 

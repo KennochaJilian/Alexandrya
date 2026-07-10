@@ -30,7 +30,11 @@
     }
 
     <button type="submit" [disabled]="isSubmitting()">
-      <svg lucideLogIn aria-hidden="true" [size]="18"></svg>
+      @if (isSubmitting()) {
+        <app-leaf-spinner [compact]="true" label="Connexion"></app-leaf-spinner>
+      } @else {
+        <svg lucideLogIn aria-hidden="true" [size]="18"></svg>
+      }
       <span>{{ isSubmitting() ? 'Connexion...' : 'Se connecter' }}</span>
     </button>
   </form>

@@ -62,10 +62,11 @@ TYPESENSE_API_KEY=xyz
 Il n'y a pas d'inscription publique. Les utilisateurs sont crees par script:
 
 ```bash
-npm run seed:user --workspace backend -- admin@local.test "dev-password" "Admin" admin_123@kindle.com
+npm run seed:user --workspace backend -- admin@local.test "dev-password" "Admin" admin_123@kindle.com admin
 ```
 
 Le mot de passe est stocke en hash bcrypt dans MongoDB.
+Le dernier argument vaut `user` ou `admin`; il permet de donner acces a l'interface d'administration.
 
 ## Collections MongoDB
 
@@ -150,7 +151,7 @@ npm run infra:up
 npm run infra:down
 npm run infra:logs
 npm test --workspace frontend -- --watch=false
-npm run seed:user --workspace backend -- email@example.com "mot-de-passe" "Nom" email@kindle.com
+npm run seed:user --workspace backend -- email@example.com "mot-de-passe" "Nom" email@kindle.com user
 npm run library:rescan --workspace backend
 npm run search:sync --workspace backend
 ```

@@ -1,0 +1,111 @@
+<main class="profile-page">
+  <header class="app-header">
+    <a class="brand-lockup" routerLink="/books" aria-label="Alexandrya">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>Alexandrya</span>
+    </a>
+
+    <div class="header-actions">
+      @if (isAdmin()) {
+        <a class="icon-button" routerLink="/admin" title="Administration">
+          <svg lucideShield aria-hidden="true" [size]="24"></svg>
+        </a>
+      }
+      <button type="button" class="icon-button" title="Se deconnecter" (click)="logout()">
+        <svg lucideLogOut aria-hidden="true" [size]="26"></svg>
+      </button>
+    </div>
+  </header>
+
+  <img class="ivy-corner" src="/assets/ivy-branch.svg" alt="" aria-hidden="true" />
+
+  <section class="profile-shell">
+    <a class="back-link" routerLink="/books">
+      <svg lucideArrowLeft aria-hidden="true" [size]="18"></svg>
+      <span>Retour</span>
+    </a>
+
+    <section class="profile-heading">
+      <span class="avatar" aria-hidden="true">
+        <svg lucideCircleUser [size]="34"></svg>
+      </span>
+      <div>
+        <span>{{ currentUser()?.email }}</span>
+        <h1>Mon profil</h1>
+      </div>
+    </section>
+
+    <form class="profile-form" [formGroup]="form" (ngSubmit)="submit()">
+      <label class="field">
+        <span>Nom</span>
+        <span class="control">
+          <svg lucideCircleUser aria-hidden="true" [size]="18"></svg>
+          <input type="text" formControlName="name" autocomplete="name" />
+        </span>
+      </label>
+
+      <label class="field">
+        <span>Adresse Kindle</span>
+        <span class="control">
+          <svg lucideSend aria-hidden="true" [size]="18"></svg>
+          <input type="email" formControlName="kindleEmail" autocomplete="email" placeholder="nom@kindle.com" />
+        </span>
+      </label>
+
+      <div class="password-group">
+        <h2>
+          <svg lucideKeyRound aria-hidden="true" [size]="18"></svg>
+          <span>Mot de passe</span>
+        </h2>
+
+        <label class="field">
+          <span>Mot de passe actuel</span>
+          <span class="control">
+            <svg lucideKeyRound aria-hidden="true" [size]="18"></svg>
+            <input type="password" formControlName="currentPassword" autocomplete="current-password" />
+          </span>
+        </label>
+
+        <label class="field">
+          <span>Nouveau mot de passe</span>
+          <span class="control">
+            <svg lucideKeyRound aria-hidden="true" [size]="18"></svg>
+            <input type="password" formControlName="newPassword" autocomplete="new-password" />
+          </span>
+        </label>
+
+        <label class="field">
+          <span>Confirmation</span>
+          <span class="control">
+            <svg lucideKeyRound aria-hidden="true" [size]="18"></svg>
+            <input type="password" formControlName="confirmPassword" autocomplete="new-password" />
+          </span>
+        </label>
+      </div>
+
+      @if (error()) {
+        <p class="notice error" role="alert">{{ error() }}</p>
+      }
+
+      @if (success()) {
+        <p class="notice success">{{ success() }}</p>
+      }
+
+      <button type="submit" class="primary-action" [disabled]="isSubmitting()">
+        @if (isSubmitting()) {
+          <app-leaf-spinner [compact]="true" label="Enregistrement"></app-leaf-spinner>
+        } @else {
+          <svg lucideSave aria-hidden="true" [size]="18"></svg>
+        }
+        <span>{{ isSubmitting() ? 'Enregistrement...' : 'Enregistrer' }}</span>
+      </button>
+    </form>
+  </section>
+
+  <footer class="app-footer">
+    <span>Mentions legales</span>
+    <span>Copyright (c) 2026 - Aquarius</span>
+  </footer>
+
+  <img class="decor-corner" src="/assets/petal-corner.svg" alt="" aria-hidden="true" />
+</main>

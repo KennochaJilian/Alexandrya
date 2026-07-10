@@ -4,7 +4,9 @@ import { config } from './config.js';
 import { requireAuth } from './middleware/auth.middleware.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 import { authRouter } from './routes/auth.routes.js';
+import { adminRouter } from './routes/admin.routes.js';
 import { booksRouter } from './routes/books.routes.js';
+import { requireAdmin } from './middleware/auth.middleware.js';
 
 export function createApp() {
   const app = express();
@@ -25,6 +27,7 @@ export function createApp() {
 
   app.use('/api/auth', authRouter);
   app.use('/api/books', requireAuth, booksRouter);
+  app.use('/api/admin', requireAuth, requireAdmin, adminRouter);
 
   app.use(notFound);
   app.use(errorHandler);

@@ -2,10 +2,15 @@ import bcrypt from 'bcryptjs';
 import { connectDatabase, disconnectDatabase } from '../src/db/mongoose.js';
 import { UserModel } from '../src/db/models/user.model.js';
 
-const [email, password, name, kindleEmail] = process.argv.slice(2);
+const [email, password, name, kindleEmail, role] = process.argv.slice(2);
 
 if (!email || !password) {
-  console.error('Usage: npm run seed:user --workspace backend -- email@example.com "mot-de-passe" "Nom" kindle@example.com');
+  console.error('Usage: npm run seed:user --workspace backend -- email@example.com "mot-de-passe" "Nom" kindle@example.com user|admin');
+  process.exit(1);
+}
+
+if (role && !['user', 'admin'].includes(role)) {
+  console.error('Role invalide. Valeurs possibles: user ou admin.');
   process.exit(1);
 }
 
@@ -21,7 +26,8 @@ await UserModel.findOneAndUpdate(
       email: normalizedEmail,
       passwordHash,
       name: name?.trim() || undefined,
-      kindleEmail: kindleEmail?.trim().toLowerCase() || undefined
+      kindleEmail: kindleEmail?.trim().toLowerCase() || undefined,
+      role: role ?? 'user'
     }
   },
   { upsert: true, new: true }

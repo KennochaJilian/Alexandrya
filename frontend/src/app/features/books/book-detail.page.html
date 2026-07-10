@@ -6,10 +6,15 @@
     </a>
 
     <div class="header-actions">
-      <button type="button" class="icon-button user-button" [title]="currentUser()?.email || 'Compte'">
+      @if (isAdmin()) {
+        <a class="icon-button" routerLink="/admin" title="Administration">
+          <svg lucideShield aria-hidden="true" [size]="24"></svg>
+        </a>
+      }
+      <a class="icon-button user-button" routerLink="/profile" [title]="currentUser()?.email || 'Compte'">
         <svg lucideCircleUser aria-hidden="true" [size]="28"></svg>
-      </button>
-      <button type="button" class="icon-button" title="Se déconnecter" (click)="logout()">
+      </a>
+      <button type="button" class="icon-button" title="Se deconnecter" (click)="logout()">
         <svg lucideLogOut aria-hidden="true" [size]="26"></svg>
       </button>
     </div>
@@ -24,7 +29,9 @@
     </a>
 
     @if (isLoading()) {
-      <p class="notice">Chargement...</p>
+      <div class="loading-panel">
+        <app-leaf-spinner label="Ouverture du livre"></app-leaf-spinner>
+      </div>
     } @else if (error() && !book()) {
       <p class="notice error" role="alert">{{ error() }}</p>
     } @else if (book(); as book) {
@@ -59,7 +66,11 @@
 
       <section class="kindle-action">
         <button type="button" (click)="sendToKindle()" [disabled]="isSending() || !currentUser()?.kindleEmail">
-          <svg lucideSend aria-hidden="true" [size]="18"></svg>
+          @if (isSending()) {
+            <app-leaf-spinner [compact]="true" label="Envoi"></app-leaf-spinner>
+          } @else {
+            <svg lucideSend aria-hidden="true" [size]="18"></svg>
+          }
           <span>{{ isSending() ? 'Envoi...' : 'Envoyer au Kindle' }}</span>
         </button>
         @if (!currentUser()?.kindleEmail) {

@@ -3,7 +3,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import type { AuthResponse, User } from './models';
+import type { AuthResponse, UpdateProfileRequest, User, UserResponse } from './models';
 
 const tokenStorageKey = 'alexandrya.token';
 const userStorageKey = 'alexandrya.user';
@@ -36,6 +36,7 @@ export class AuthService {
   readonly token = signal<string | null>(getStoredToken());
   readonly currentUser = signal<User | null>(readStoredUser());
   readonly isAuthenticated = computed(() => Boolean(this.token()));
+  readonly isAdmin = computed(() => this.currentUser()?.role === 'admin');
 
   login(credentials: { email: string; password: string }, remember = true) {
     return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/login`, credentials).pipe(
@@ -54,6 +55,13 @@ export class AuthService {
     void this.router.navigateByUrl('/login');
   }
 
+  updateProfile(payload: UpdateProfileRequest) {
+    return this.http.patch<UserResponse>(`${environment.apiUrl}/auth/me`, payload).pipe(
+      tap((response) => this.storeUser(response.user)),
+      map((response) => response.user)
+    );
+  }
+
   private storeSession(response: AuthResponse, remember: boolean) {
     const storage = remember ? localStorage : sessionStorage;
     const otherStorage = remember ? sessionStorage : localStorage;
@@ -64,5 +72,12 @@ export class AuthService {
     storage.setItem(userStorageKey, JSON.stringify(response.user));
     this.token.set(response.token);
     this.currentUser.set(response.user);
+  }
+
+  private storeUser(user: User) {
+    const storage = localStorage.getItem(tokenStorageKey) ? localStorage : sessionStorage;
+
+    storage.setItem(userStorageKey, JSON.stringify(user));
+    this.currentUser.set(user);
   }
 }

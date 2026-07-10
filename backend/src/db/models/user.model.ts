@@ -1,10 +1,13 @@
 import { Schema, model } from 'mongoose';
 
+export type UserRole = 'user' | 'admin';
+
 export interface UserRecord {
   email: string;
   name?: string;
   passwordHash: string;
   kindleEmail?: string;
+  role?: UserRole;
 }
 
 const userSchema = new Schema<UserRecord>({
@@ -29,6 +32,12 @@ const userSchema = new Schema<UserRecord>({
     type: String,
     lowercase: true,
     trim: true
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+    index: true
   }
 }, {
   timestamps: true

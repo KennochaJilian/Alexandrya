@@ -1,0 +1,14 @@
+<span class="leaf-spinner" [class.compact]="compact" role="status" [attr.aria-label]="label">
+  <span class="leaf-wheel" aria-hidden="true">
+    <span class="leaf leaf-1"></span>
+    <span class="leaf leaf-2"></span>
+    <span class="leaf leaf-3"></span>
+    <span class="leaf leaf-4"></span>
+    <span class="leaf leaf-5"></span>
+    <span class="leaf leaf-6"></span>
+  </span>
+
+  @if (!compact) {
+    <span class="leaf-label">{{ label }}</span>
+  }
+</span>

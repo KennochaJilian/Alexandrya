@@ -28,6 +28,13 @@
   text-decoration: none;
 }
 
+.loading-panel {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  padding: 32px 0;
+}
+
 .book-hero {
   display: grid;
   grid-template-columns: 102px minmax(0, 1fr);

@@ -23,10 +23,6 @@ export class BooksService {
     return this.http.get<BookResponse>(`${environment.apiUrl}/books/${id}`);
   }
 
-  rescan() {
-    return this.http.post<BookListResponse>(`${environment.apiUrl}/books/rescan`, {});
-  }
-
   sendToKindle(id: string) {
     return this.http.post<KindleSendResponse>(`${environment.apiUrl}/books/${id}/send-to-kindle`, {});
   }

@@ -8,6 +8,7 @@ import {
   LucideFileText,
   LucideLogOut,
   LucideSend,
+  LucideShield,
   LucideTag
 } from '@lucide/angular';
 import { readApiError } from '../../core/api-error';
@@ -15,6 +16,7 @@ import { AuthService } from '../../core/auth.service';
 import { BooksService } from '../../core/books.service';
 import { resolveCoverUrl } from '../../core/cover-url';
 import type { Book } from '../../core/models';
+import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
 
 @Component({
   selector: 'app-book-detail-page',
@@ -27,7 +29,9 @@ import type { Book } from '../../core/models';
     LucideFileText,
     LucideLogOut,
     LucideSend,
-    LucideTag
+    LucideShield,
+    LucideTag,
+    LeafSpinnerComponent
   ],
   templateUrl: './book-detail.page.html',
   styleUrl: './book-detail.page.scss'
@@ -39,6 +43,7 @@ export class BookDetailPage {
   private readonly bookId = this.route.snapshot.paramMap.get('id') ?? '';
 
   readonly currentUser = this.auth.currentUser;
+  readonly isAdmin = this.auth.isAdmin;
   readonly book = signal<Book | null>(null);
   readonly isLoading = signal(true);
   readonly isSending = signal(false);

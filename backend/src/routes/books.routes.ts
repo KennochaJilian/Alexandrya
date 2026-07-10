@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { getBook, getBookFile, refreshLibrary, searchBooks } from '../services/library.service.js';
+import { getBook, getBookFile, searchBooks } from '../services/library.service.js';
 import { sendBookToKindle } from '../services/kindle.service.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
@@ -19,11 +19,6 @@ export const booksRouter = Router();
 booksRouter.get('/', asyncHandler(async (req, res) => {
   const filters = searchSchema.parse(req.query);
   const books = await searchBooks(filters);
-  res.json({ books, total: books.length });
-}));
-
-booksRouter.post('/rescan', asyncHandler(async (_req, res) => {
-  const books = await refreshLibrary();
   res.json({ books, total: books.length });
 }));
 

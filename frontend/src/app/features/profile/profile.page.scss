@@ -1,0 +1,151 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: var(--page);
+}
+
+.profile-page {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.profile-shell {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 680px);
+  margin: 0 auto;
+  padding: 28px 18px 0;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  color: var(--purple);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.profile-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 22px 0 24px;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  background: var(--purple-quiet);
+  color: var(--purple);
+}
+
+.profile-heading span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.profile-heading h1 {
+  margin: 4px 0 0;
+  color: var(--purple);
+  font-family: var(--font-title);
+  font-size: 2.45rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.profile-form,
+.password-group {
+  display: grid;
+  gap: 14px;
+}
+
+.password-group {
+  margin-top: 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.password-group h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--purple);
+  font-size: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.control {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  align-items: center;
+  min-height: 46px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #ffffff;
+  color: var(--purple);
+}
+
+.control:focus-within {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 4px rgb(74 6 96 / 12%);
+}
+
+.control input {
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+
+.control input:focus {
+  outline: none;
+}
+
+.primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--purple);
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.primary-action:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.app-footer {
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 720px) {
+  .profile-shell {
+    padding-top: 46px;
+  }
+}

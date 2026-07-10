@@ -1,3 +1,5 @@
+export type UserRole = 'user' | 'admin';
+
 export interface AppUser {
   id: string;
   email: string;
@@ -5,6 +7,7 @@ export interface AppUser {
   password?: string;
   passwordHash?: string;
   kindleEmail?: string;
+  role?: UserRole;
 }
 
 export interface PublicUser {
@@ -12,4 +15,5 @@ export interface PublicUser {
   email: string;
   name?: string;
   kindleEmail?: string;
+  role: UserRole;
 }

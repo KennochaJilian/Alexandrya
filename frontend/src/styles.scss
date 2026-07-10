@@ -154,6 +154,7 @@ a {
   background: transparent;
   color: inherit;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .icon-button:hover,
@@ -182,6 +183,14 @@ a {
 .notice.success {
   border-color: rgb(24 118 92 / 28%);
   color: var(--success);
+}
+
+.loading-panel {
+  display: grid;
+  place-items: center;
+  width: min(100%, 720px);
+  min-height: 180px;
+  margin: 8px auto 0;
 }
 
 .genre-chip {

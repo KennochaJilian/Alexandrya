@@ -1,0 +1,150 @@
+<main class="admin-page">
+  <header class="app-header">
+    <a class="brand-lockup" routerLink="/books" aria-label="Alexandrya">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>Alexandrya</span>
+    </a>
+
+    <div class="header-actions">
+      <a class="icon-button" routerLink="/profile" title="Mon profil">
+        <svg lucideCircleUser aria-hidden="true" [size]="26"></svg>
+      </a>
+      <button type="button" class="icon-button" title="Se deconnecter" (click)="logout()">
+        <svg lucideLogOut aria-hidden="true" [size]="26"></svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="admin-shell">
+    <a class="back-link" routerLink="/books">
+      <svg lucideArrowLeft aria-hidden="true" [size]="18"></svg>
+      <span>Retour</span>
+    </a>
+
+    <section class="admin-heading">
+      <span class="heading-icon" aria-hidden="true">
+        <svg lucideShield [size]="34"></svg>
+      </span>
+      <div>
+        <span>Administration</span>
+        <h1>Console</h1>
+      </div>
+    </section>
+
+    @if (error()) {
+      <p class="notice error" role="alert">{{ error() }}</p>
+    }
+
+    <section class="admin-grid">
+      <form class="panel" [formGroup]="userForm" (ngSubmit)="createUser()">
+        <div class="panel-heading">
+          <svg lucideUserPlus aria-hidden="true" [size]="20"></svg>
+          <h2>Ajouter un utilisateur</h2>
+        </div>
+
+        <label class="field">
+          <span>Email</span>
+          <input type="email" formControlName="email" autocomplete="off" />
+        </label>
+
+        <label class="field">
+          <span>Mot de passe</span>
+          <input type="password" formControlName="password" autocomplete="new-password" />
+        </label>
+
+        <label class="field">
+          <span>Nom</span>
+          <input type="text" formControlName="name" autocomplete="off" />
+        </label>
+
+        <label class="field">
+          <span>Adresse Kindle</span>
+          <input type="email" formControlName="kindleEmail" autocomplete="off" />
+        </label>
+
+        <label class="field">
+          <span>Role</span>
+          <select formControlName="role">
+            <option value="user">Utilisateur</option>
+            <option value="admin">Administrateur</option>
+          </select>
+        </label>
+
+        @if (userMessage()) {
+          <p class="notice success">{{ userMessage() }}</p>
+        }
+
+        <button type="submit" class="primary-action" [disabled]="isCreatingUser()">
+          @if (isCreatingUser()) {
+            <app-leaf-spinner [compact]="true" label="Creation"></app-leaf-spinner>
+          } @else {
+            <svg lucideSave aria-hidden="true" [size]="18"></svg>
+          }
+          <span>{{ isCreatingUser() ? 'Creation...' : 'Creer le compte' }}</span>
+        </button>
+      </form>
+
+      <section class="panel maintenance-panel">
+        <div class="panel-heading">
+          <svg lucideDatabase aria-hidden="true" [size]="20"></svg>
+          <h2>Maintenance</h2>
+        </div>
+
+        <div class="maintenance-actions">
+          <button type="button" class="secondary-action" [disabled]="isRescanning()" (click)="rescanLibrary()">
+            @if (isRescanning()) {
+              <app-leaf-spinner [compact]="true" label="Scan"></app-leaf-spinner>
+            } @else {
+              <svg lucideRefreshCw aria-hidden="true" [size]="18"></svg>
+            }
+            <span>{{ isRescanning() ? 'Scan...' : 'Rescanner la librairie' }}</span>
+          </button>
+
+          <button type="button" class="secondary-action" [disabled]="isReindexing()" (click)="reindexSearch()">
+            @if (isReindexing()) {
+              <app-leaf-spinner [compact]="true" label="Indexation"></app-leaf-spinner>
+            } @else {
+              <svg lucideSearch aria-hidden="true" [size]="18"></svg>
+            }
+            <span>{{ isReindexing() ? 'Indexation...' : 'Reindexer Typesense' }}</span>
+          </button>
+        </div>
+
+        @if (maintenanceMessage()) {
+          <p class="notice success">{{ maintenanceMessage() }}</p>
+        }
+      </section>
+    </section>
+
+    <section class="panel users-panel">
+      <div class="panel-heading">
+        <svg lucideUsersRound aria-hidden="true" [size]="20"></svg>
+        <h2>Utilisateurs</h2>
+      </div>
+
+      @if (isLoadingUsers()) {
+        <div class="loading-panel">
+          <app-leaf-spinner label="Chargement des utilisateurs"></app-leaf-spinner>
+        </div>
+      } @else {
+        <div class="users-table">
+          <div class="users-head">
+            <span>Email</span>
+            <span>Nom</span>
+            <span>Kindle</span>
+            <span>Role</span>
+          </div>
+
+          @for (user of users(); track user.id) {
+            <div class="users-row">
+              <span>{{ user.email }}</span>
+              <span>{{ user.name || '-' }}</span>
+              <span>{{ user.kindleEmail || '-' }}</span>
+              <span>{{ user.role === 'admin' ? 'Admin' : 'User' }}</span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  </section>
+</main>

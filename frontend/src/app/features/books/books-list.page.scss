@@ -121,9 +121,8 @@
 }
 
 .filter-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .text-button {
@@ -138,11 +137,6 @@
   color: var(--gray);
   font-weight: 700;
   cursor: pointer;
-}
-
-.text-button.accent {
-  border-color: rgb(62 179 230 / 55%);
-  color: #167eaa;
 }
 
 .section-title {

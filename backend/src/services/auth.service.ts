@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
-import { UserModel, type UserRecord } from '../db/models/user.model.js';
+import { UserModel, type UserRecord, type UserRole } from '../db/models/user.model.js';
 import { HttpError } from '../errors.js';
 import type { PublicUser } from '../models/user.js';
 
@@ -14,12 +14,28 @@ interface TokenPayload {
 
 type UserLike = UserRecord & { _id: unknown };
 
+interface UpdateProfileInput {
+  name?: string | null;
+  kindleEmail?: string | null;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
+interface CreateUserInput {
+  email: string;
+  password: string;
+  name?: string;
+  kindleEmail?: string;
+  role?: UserRole;
+}
+
 export function toPublicUser(user: UserLike): PublicUser {
   return {
     id: String(user._id),
     email: user.email,
     name: user.name,
-    kindleEmail: user.kindleEmail
+    kindleEmail: user.kindleEmail,
+    role: user.role ?? 'user'
   };
 }
 
@@ -66,4 +82,61 @@ export async function verifyToken(token: string): Promise<PublicUser> {
   }
 
   return user;
+}
+
+export async function updateProfile(userId: string, input: UpdateProfileInput): Promise<PublicUser> {
+  const user = await UserModel.findById(userId).select('+passwordHash');
+
+  if (!user) {
+    throw new HttpError(404, 'USER_NOT_FOUND', 'Utilisateur introuvable.');
+  }
+
+  if (input.name !== undefined) {
+    user.name = input.name?.trim() || undefined;
+  }
+
+  if (input.kindleEmail !== undefined) {
+    user.kindleEmail = input.kindleEmail?.trim().toLowerCase() || undefined;
+  }
+
+  if (input.newPassword) {
+    if (!input.currentPassword) {
+      throw new HttpError(400, 'CURRENT_PASSWORD_REQUIRED', 'Mot de passe actuel requis.');
+    }
+
+    const passwordMatches = await bcrypt.compare(input.currentPassword, user.passwordHash);
+
+    if (!passwordMatches) {
+      throw new HttpError(400, 'INVALID_CURRENT_PASSWORD', 'Mot de passe actuel incorrect.');
+    }
+
+    user.passwordHash = await bcrypt.hash(input.newPassword, 12);
+  }
+
+  await user.save();
+  return toPublicUser(user);
+}
+
+export async function listUsers(): Promise<PublicUser[]> {
+  const users = await UserModel.find().sort({ email: 1 }).lean();
+  return users.map(toPublicUser);
+}
+
+export async function createUser(input: CreateUserInput): Promise<PublicUser> {
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const existingUser = await UserModel.findOne({ email: normalizedEmail }).lean();
+
+  if (existingUser) {
+    throw new HttpError(409, 'USER_ALREADY_EXISTS', 'Un utilisateur existe deja avec cet email.');
+  }
+
+  const user = await UserModel.create({
+    email: normalizedEmail,
+    passwordHash: await bcrypt.hash(input.password, 12),
+    name: input.name?.trim() || undefined,
+    kindleEmail: input.kindleEmail?.trim().toLowerCase() || undefined,
+    role: input.role ?? 'user'
+  });
+
+  return toPublicUser(user);
 }

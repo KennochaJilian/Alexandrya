@@ -1,0 +1,99 @@
+:host {
+  display: contents;
+}
+
+.leaf-spinner {
+  display: inline-grid;
+  justify-items: center;
+  gap: 10px;
+  color: var(--purple);
+  font-weight: 900;
+}
+
+.leaf-wheel {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  animation: leaf-spin 1.15s linear infinite;
+}
+
+.leaf {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 25px;
+  margin: -12px 0 0 -7px;
+  border-radius: 100% 0 100% 0;
+  background: currentColor;
+  transform: rotate(var(--angle)) translateY(-19px) rotate(42deg);
+  opacity: var(--alpha);
+  box-shadow: 0 2px 4px rgb(74 6 96 / 14%);
+}
+
+.leaf-1 {
+  --angle: 0deg;
+  --alpha: 1;
+}
+
+.leaf-2 {
+  --angle: 60deg;
+  --alpha: 0.82;
+}
+
+.leaf-3 {
+  --angle: 120deg;
+  --alpha: 0.7;
+}
+
+.leaf-4 {
+  --angle: 180deg;
+  --alpha: 0.58;
+}
+
+.leaf-5 {
+  --angle: 240deg;
+  --alpha: 0.72;
+}
+
+.leaf-6 {
+  --angle: 300deg;
+  --alpha: 0.9;
+}
+
+.leaf-label {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.compact {
+  width: 22px;
+  height: 22px;
+  gap: 0;
+  color: currentColor;
+}
+
+.compact .leaf-wheel {
+  width: 20px;
+  height: 20px;
+}
+
+.compact .leaf {
+  width: 6px;
+  height: 11px;
+  margin: -5px 0 0 -3px;
+  transform: rotate(var(--angle)) translateY(-7px) rotate(42deg);
+  box-shadow: none;
+}
+
+@keyframes leaf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaf-wheel {
+    animation-duration: 2.4s;
+  }
+}

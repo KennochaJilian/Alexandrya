@@ -6,10 +6,15 @@
     </a>
 
     <div class="header-actions">
-      <button type="button" class="icon-button user-button" [title]="currentUser()?.email || 'Compte'">
+      @if (isAdmin()) {
+        <a class="icon-button" routerLink="/admin" title="Administration">
+          <svg lucideShield aria-hidden="true" [size]="24"></svg>
+        </a>
+      }
+      <a class="icon-button user-button" routerLink="/profile" [title]="currentUser()?.email || 'Compte'">
         <svg lucideCircleUser aria-hidden="true" [size]="28"></svg>
-      </button>
-      <button type="button" class="icon-button" title="Se déconnecter" (click)="logout()">
+      </a>
+      <button type="button" class="icon-button" title="Se deconnecter" (click)="logout()">
         <svg lucideLogOut aria-hidden="true" [size]="26"></svg>
       </button>
     </div>
@@ -59,10 +64,6 @@
           </label>
           <div class="filter-actions">
             <button type="button" class="text-button" (click)="resetFilters()">Effacer</button>
-            <button type="button" class="text-button accent" (click)="rescan()">
-              <svg lucideRefreshCw aria-hidden="true" [size]="16"></svg>
-              <span>Rescanner</span>
-            </button>
           </div>
         </div>
       }
@@ -79,7 +80,9 @@
   }
 
   @if (isLoading()) {
-    <p class="notice">Chargement...</p>
+    <div class="loading-panel">
+      <app-leaf-spinner label="Recherche des livres"></app-leaf-spinner>
+    </div>
   } @else if (books().length === 0) {
     <p class="notice">Aucun livre trouvé.</p>
   } @else {
