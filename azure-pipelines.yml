@@ -73,4 +73,4 @@ stages:
               mkdir -p "$(frontendDeployPath)"
               rsync -a --delete "$(frontendDistPath)/" "$(frontendDeployPath)/"
             displayName: Deploy frontend to Apache
-            condition: and(succeeded(), eq(variables.deployFrontendToApache, true), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+            condition: and(succeeded(), eq(variables.deployFrontendToApache, true), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
