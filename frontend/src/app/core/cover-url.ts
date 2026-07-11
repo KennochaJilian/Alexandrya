@@ -9,5 +9,8 @@ export function resolveCoverUrl(coverUrl: string | undefined): string | undefine
     return coverUrl;
   }
 
-  return `${new URL(environment.apiUrl).origin}${coverUrl}`;
+  const browserOrigin = globalThis.location?.origin ?? 'http://localhost';
+  const apiUrl = new URL(environment.apiUrl, browserOrigin);
+
+  return new URL(coverUrl, apiUrl.origin).toString();
 }
