@@ -1,4 +1,5 @@
 import { config } from '../config.js';
+import { logger, serializeError } from '../utils/logger.js';
 
 export interface CoverLookupInput {
   title: string;
@@ -86,19 +87,49 @@ function normalizeImageUrl(value: string): string {
   return value.replace(/^http:\/\//i, 'https://');
 }
 
-async function fetchJson<T>(url: URL): Promise<T | null> {
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(4500),
-    headers: {
-      accept: 'application/json'
-    }
-  });
+function safeExternalUrl(url: URL): string {
+  const safeUrl = new URL(url);
 
-  if (!response.ok) {
-    return null;
+  if (safeUrl.searchParams.has('key')) {
+    safeUrl.searchParams.set('key', '[redacted]');
   }
 
-  return response.json() as Promise<T>;
+  return safeUrl.toString();
+}
+
+async function fetchJson<T>(url: URL, provider: string): Promise<T | null> {
+  const startedAt = performance.now();
+
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(config.coverLookupTimeoutMs),
+      headers: {
+        accept: 'application/json'
+      }
+    });
+    const durationMs = Math.round(performance.now() - startedAt);
+
+    if (!response.ok) {
+      logger.warn('cover lookup request returned non-ok status', {
+        provider,
+        status: response.status,
+        durationMs,
+        url: safeExternalUrl(url)
+      });
+      return null;
+    }
+
+    return response.json() as Promise<T>;
+  } catch (error) {
+    logger.warn('cover lookup request failed', {
+      provider,
+      durationMs: Math.round(performance.now() - startedAt),
+      timeoutMs: config.coverLookupTimeoutMs,
+      url: safeExternalUrl(url),
+      error: serializeError(error)
+    });
+    return null;
+  }
 }
 
 function pickGoogleImage(imageLinks: Record<string, string> | undefined): string | undefined {
@@ -132,7 +163,7 @@ async function lookupGoogleBooks(input: CoverLookupInput): Promise<CoverLookupRe
       url.searchParams.set('key', config.googleBooksApiKey);
     }
 
-    const data = await fetchJson<GoogleBooksResponse>(url);
+    const data = await fetchJson<GoogleBooksResponse>(url, 'google-books');
     const match = data?.items?.find((item) => {
       const info = item.volumeInfo;
       return sameTitle(info?.title, input.title) && sameAuthor(info?.authors, author) && pickGoogleImage(info?.imageLinks);
@@ -167,7 +198,7 @@ async function lookupOpenLibrary(input: CoverLookupInput): Promise<CoverLookupRe
       url.searchParams.set('author', author);
     }
 
-    const data = await fetchJson<OpenLibraryResponse>(url);
+    const data = await fetchJson<OpenLibraryResponse>(url, 'open-library');
     const match = data?.docs?.find((doc) => (
       doc.cover_i
       && sameTitle(doc.title, input.title)
@@ -188,7 +219,7 @@ async function lookupOpenLibrary(input: CoverLookupInput): Promise<CoverLookupRe
     url.searchParams.set('q', `${normalizedTitle} ${normalizedAuthor}`);
     url.searchParams.set('limit', '10');
     url.searchParams.set('fields', 'title,author_name,cover_i');
-    const data = await fetchJson<OpenLibraryResponse>(url);
+    const data = await fetchJson<OpenLibraryResponse>(url, 'open-library');
     const match = data?.docs?.find((doc) => doc.cover_i && sameAuthor(doc.author_name, author))
       ?? data?.docs?.find((doc) => doc.cover_i);
 
@@ -209,8 +240,23 @@ export async function lookupBookCover(input: CoverLookupInput): Promise<CoverLoo
   }
 
   try {
-    return await lookupGoogleBooks(input) ?? await lookupOpenLibrary(input);
-  } catch {
+    const cover = await lookupGoogleBooks(input) ?? await lookupOpenLibrary(input);
+
+    if (cover) {
+      logger.debug('cover lookup found cover', {
+        title: input.title,
+        authors: input.authors,
+        source: cover.coverSource
+      });
+    }
+
+    return cover;
+  } catch (error) {
+    logger.warn('cover lookup failed', {
+      title: input.title,
+      authors: input.authors,
+      error: serializeError(error)
+    });
     return null;
   }
 }

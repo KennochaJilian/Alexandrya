@@ -17,7 +17,18 @@ function readFilenamePattern(value: string | undefined): 'title-author' | 'autho
   return value === 'author-title' ? 'author-title' : 'title-author';
 }
 
+function readNumber(value: string | undefined, fallback: number, min: number, max: number): number {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, Math.trunc(parsed)));
+}
+
 export const config = {
+  logLevel: process.env.LOG_LEVEL ?? 'info',
   port: Number(process.env.PORT ?? 4000),
   corsOrigin: (process.env.CORS_ORIGIN ?? 'http://localhost:4200')
     .split(',')
@@ -29,6 +40,8 @@ export const config = {
   ebookRoot: resolveFromBackend(process.env.EBOOK_ROOT ?? './library'),
   ebookFilenamePattern: readFilenamePattern(process.env.EBOOK_FILENAME_PATTERN),
   coverLookupEnabled: readBoolean(process.env.COVER_LOOKUP_ENABLED, true),
+  coverLookupTimeoutMs: readNumber(process.env.COVER_LOOKUP_TIMEOUT_MS, 4500, 500, 30000),
+  libraryScanConcurrency: readNumber(process.env.LIBRARY_SCAN_CONCURRENCY, 4, 1, 16),
   googleBooksApiKey: process.env.GOOGLE_BOOKS_API_KEY,
   coverStoragePath: resolveFromBackend(process.env.COVER_STORAGE_PATH ?? './data/covers'),
   coverPublicPath: process.env.COVER_PUBLIC_PATH ?? '/covers',

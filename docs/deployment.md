@@ -101,6 +101,30 @@ Synchroniser Typesense :
 docker exec -it alexandrya-api node dist/cli/sync-search.js
 ```
 
+## Logs et debug
+
+Les logs API sont emis en JSON dans stdout Docker :
+
+```bash
+docker logs -f alexandrya-api
+```
+
+Variables utiles dans Portainer :
+
+```env
+LOG_LEVEL=info
+LIBRARY_SCAN_CONCURRENCY=4
+COVER_LOOKUP_TIMEOUT_MS=4500
+```
+
+Pour diagnostiquer un scan plus finement, passer temporairement :
+
+```env
+LOG_LEVEL=debug
+```
+
+Puis redeployer la stack. Les appels externes Google Books/OpenLibrary sont journalises avec leur fournisseur, duree, statut HTTP et erreur eventuelle. Les cles Google Books sont masquees dans les logs.
+
 ## Azure Pipelines plus tard
 
 Le pipeline Azure self-hosted est documente ici :

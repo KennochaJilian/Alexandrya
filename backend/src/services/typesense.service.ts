@@ -6,6 +6,7 @@ import {
 } from 'typesense';
 import { config } from '../config.js';
 import type { BookSearchFilters, PublicBook } from '../models/book.js';
+import { logger, serializeError } from '../utils/logger.js';
 
 type BookSearchDocument = PublicBook & {
   id: string;
@@ -60,8 +61,10 @@ function warnTypesenseUnavailable(action: string, error: unknown): void {
     return;
   }
 
-  const message = error instanceof Error ? error.message : String(error);
-  console.warn(`[typesense] ${action} impossible, fallback MongoDB utilise. ${message}`);
+  logger.warn('typesense unavailable', {
+    action,
+    error: serializeError(error)
+  });
   warningAlreadyShown = true;
 }
 
@@ -246,7 +249,9 @@ export async function indexBooksInTypesense(books: PublicBook[]): Promise<boolea
       : [];
 
     if (failedImports.length) {
-      console.warn(`[typesense] ${failedImports.length} livre(s) non indexes.`);
+      logger.warn('typesense import partially failed', {
+        failed: failedImports.length
+      });
     }
 
     return true;

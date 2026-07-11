@@ -3,6 +3,7 @@ import express from 'express';
 import { config } from './config.js';
 import { requireAuth } from './middleware/auth.middleware.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
+import { requestLogger } from './middleware/request-logger.middleware.js';
 import { authRouter } from './routes/auth.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
 import { booksRouter } from './routes/books.routes.js';
@@ -15,6 +16,7 @@ export function createApp() {
     origin: config.corsOrigin,
     credentials: false
   }));
+  app.use(requestLogger);
   app.use(express.json({ limit: '1mb' }));
   app.use(config.coverPublicPath, express.static(config.coverStoragePath, {
     immutable: true,

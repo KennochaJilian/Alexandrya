@@ -12,6 +12,7 @@ import { slugify } from '../utils/slug.js';
 import { lookupBookCover } from './cover-lookup.service.js';
 import { type EmbeddedCoverImage, readEbookMetadata } from './ebook-metadata.service.js';
 import { indexBooksInTypesense, searchBooksInTypesense } from './typesense.service.js';
+import { logger, serializeError } from '../utils/logger.js';
 
 const ebookExtensions = new Set(['.azw', '.azw3', '.epub', '.mobi', '.pdf', '.txt']);
 const DEFAULT_PAGE_SIZE = 20;
@@ -87,6 +88,42 @@ async function walkEbooks(directory: string): Promise<string[]> {
   }));
 
   return files.flat();
+}
+
+async function runWithConcurrency<T>(
+  values: T[],
+  concurrency: number,
+  handler: (value: T, index: number) => Promise<void>
+): Promise<number> {
+  let nextIndex = 0;
+  let failed = 0;
+
+  async function worker() {
+    while (nextIndex < values.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+
+      try {
+        await handler(values[currentIndex] as T, currentIndex);
+      } catch (error) {
+        failed += 1;
+        logger.error('library scan item failed', {
+          index: currentIndex,
+          item: typeof values[currentIndex] === 'string' ? values[currentIndex] : undefined,
+          error: serializeError(error)
+        });
+      }
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.min(concurrency, values.length) },
+    () => worker()
+  );
+
+  await Promise.all(workers);
+
+  return failed;
 }
 
 function unique(values: string[]): string[] {
@@ -244,12 +281,30 @@ function paginateBooks(books: PublicBook[], filters: BookSearchFilters): BookSea
 }
 
 export async function refreshLibrary(): Promise<PublicBook[]> {
+  const startedAt = performance.now();
+  logger.info('library scan started', {
+    ebookRoot: config.ebookRoot,
+    concurrency: config.libraryScanConcurrency,
+    coverLookupEnabled: config.coverLookupEnabled
+  });
+
   const ebookFiles = await walkEbooks(config.ebookRoot);
 
-  await Promise.all(ebookFiles.map(async (filePath) => {
+  logger.info('library scan files discovered', {
+    totalFiles: ebookFiles.length
+  });
+
+  const failed = await runWithConcurrency(ebookFiles, config.libraryScanConcurrency, async (filePath, index) => {
     const relativePath = normalizeRelativePath(path.relative(config.ebookRoot, filePath));
     const publicId = createId(relativePath);
     const fileName = path.basename(filePath);
+    const itemStartedAt = performance.now();
+
+    logger.debug('library scan item started', {
+      index,
+      relativePath
+    });
+
     const stats = await fs.stat(filePath);
     const inferred = parseFileName(fileName);
     const embeddedMetadata = await readEbookMetadata(filePath);
@@ -300,10 +355,24 @@ export async function refreshLibrary(): Promise<PublicBook[]> {
       },
       { upsert: true, new: true }
     );
-  }));
+
+    logger.debug('library scan item completed', {
+      index,
+      relativePath,
+      durationMs: Math.round(performance.now() - itemStartedAt)
+    });
+  });
 
   const books = await findBooksInMongo({});
-  await indexBooksInTypesense(books);
+  const indexed = await indexBooksInTypesense(books);
+
+  logger.info('library scan completed', {
+    totalFiles: ebookFiles.length,
+    totalBooks: books.length,
+    failed,
+    indexed,
+    durationMs: Math.round(performance.now() - startedAt)
+  });
 
   return books;
 }
@@ -342,8 +411,16 @@ async function searchBooksInMongo(filters: BookSearchFilters): Promise<BookSearc
 }
 
 export async function syncSearchIndex(): Promise<{ total: number; indexed: boolean }> {
+  const startedAt = performance.now();
+  logger.info('typesense sync started');
   const books = await findBooksInMongo({});
   const indexed = await indexBooksInTypesense(books);
+
+  logger.info('typesense sync completed', {
+    total: books.length,
+    indexed,
+    durationMs: Math.round(performance.now() - startedAt)
+  });
 
   return {
     total: books.length,

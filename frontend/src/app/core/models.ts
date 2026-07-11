@@ -86,3 +86,20 @@ export interface AdminLibraryActionResponse {
   total: number;
   indexed?: boolean;
 }
+
+export type AdminMaintenanceJobStatus = 'running' | 'completed' | 'failed';
+export type AdminMaintenanceJobType = 'library-rescan' | 'search-reindex';
+
+export interface AdminMaintenanceJob {
+  id: string;
+  type: AdminMaintenanceJobType;
+  status: AdminMaintenanceJobStatus;
+  startedAt: string;
+  finishedAt?: string;
+  result?: AdminLibraryActionResponse;
+  error?: string;
+}
+
+export interface AdminMaintenanceJobResponse {
+  job: AdminMaintenanceJob;
+}

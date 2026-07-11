@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
-import type { AdminLibraryActionResponse, CreateUserRequest, UserListResponse, UserResponse } from './models';
+import type { AdminMaintenanceJobResponse, CreateUserRequest, UserListResponse, UserResponse } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
@@ -16,10 +16,14 @@ export class AdminService {
   }
 
   rescanLibrary() {
-    return this.http.post<AdminLibraryActionResponse>(`${environment.apiUrl}/admin/library/rescan`, {});
+    return this.http.post<AdminMaintenanceJobResponse>(`${environment.apiUrl}/admin/library/rescan`, {});
   }
 
   reindexSearch() {
-    return this.http.post<AdminLibraryActionResponse>(`${environment.apiUrl}/admin/search/reindex`, {});
+    return this.http.post<AdminMaintenanceJobResponse>(`${environment.apiUrl}/admin/search/reindex`, {});
+  }
+
+  getMaintenanceJob(id: string) {
+    return this.http.get<AdminMaintenanceJobResponse>(`${environment.apiUrl}/admin/jobs/${id}`);
   }
 }

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, type WritableSignal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
@@ -14,11 +14,11 @@ import {
   LucideUserPlus,
   LucideUsersRound
 } from '@lucide/angular';
-import { finalize } from 'rxjs';
+import { finalize, switchMap, takeWhile, timer } from 'rxjs';
 import { readApiError } from '../../core/api-error';
 import { AdminService } from '../../core/admin.service';
 import { AuthService } from '../../core/auth.service';
-import type { CreateUserRequest, User, UserRole } from '../../core/models';
+import type { AdminMaintenanceJob, CreateUserRequest, User, UserRole } from '../../core/models';
 import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
 
 @Component({
@@ -142,15 +142,55 @@ export class AdminPage {
 
     loadingSignal.set(true);
 
-    request.pipe(
+    request.subscribe({
+      next: ({ job }) => {
+        this.maintenanceMessage.set(action === 'rescan'
+          ? 'Scan lance.'
+          : 'Indexation lancee.');
+        this.pollMaintenanceJob(action, job.id, loadingSignal);
+      },
+      error: (error: unknown) => {
+        loadingSignal.set(false);
+        this.error.set(readApiError(error));
+      }
+    });
+  }
+
+  private pollMaintenanceJob(
+    action: 'rescan' | 'reindex',
+    jobId: string,
+    loadingSignal: WritableSignal<boolean>
+  ) {
+    timer(0, 2000).pipe(
+      switchMap(() => this.adminService.getMaintenanceJob(jobId)),
+      takeWhile(({ job }) => job.status === 'running', true),
       finalize(() => loadingSignal.set(false))
     ).subscribe({
-      next: (result) => {
-        this.maintenanceMessage.set(action === 'rescan'
-          ? `${result.total} livre(s) rescannes.`
-          : `${result.total} livre(s) reindexes dans Typesense.`);
-      },
-      error: (error: unknown) => this.error.set(readApiError(error))
+      next: ({ job }) => this.updateMaintenanceMessage(action, job),
+      error: (error: unknown) => {
+        this.error.set(readApiError(error));
+      }
     });
+  }
+
+  private updateMaintenanceMessage(action: 'rescan' | 'reindex', job: AdminMaintenanceJob) {
+    if (job.status === 'running') {
+      this.maintenanceMessage.set(action === 'rescan'
+        ? 'Scan en cours...'
+        : 'Indexation en cours...');
+      return;
+    }
+
+    if (job.status === 'failed') {
+      this.error.set(job.error ?? 'La tache de maintenance a echoue.');
+      this.maintenanceMessage.set(null);
+      return;
+    }
+
+    const total = job.result?.total ?? 0;
+
+    this.maintenanceMessage.set(action === 'rescan'
+      ? `${total} livre(s) rescannes.`
+      : `${total} livre(s) reindexes dans Typesense.`);
   }
 }
