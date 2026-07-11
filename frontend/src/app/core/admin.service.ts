@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
-import type { AdminMaintenanceJobResponse, CreateUserRequest, UserListResponse, UserResponse } from './models';
+import type { AdminBookUploadResponse, AdminMaintenanceJobResponse, CreateUserRequest, UserListResponse, UserResponse } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
@@ -13,6 +13,14 @@ export class AdminService {
 
   createUser(payload: CreateUserRequest) {
     return this.http.post<UserResponse>(`${environment.apiUrl}/admin/users`, payload);
+  }
+
+  uploadBooks(files: File[]) {
+    const formData = new FormData();
+
+    files.forEach((file) => formData.append('files', file));
+
+    return this.http.post<AdminBookUploadResponse>(`${environment.apiUrl}/admin/library/upload`, formData);
   }
 
   rescanLibrary() {

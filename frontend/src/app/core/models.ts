@@ -27,6 +27,7 @@ export interface Book {
   fileName: string;
   relativePath: string;
   sizeBytes: number;
+  addedAt?: string;
 }
 
 export interface BookListResponse {
@@ -85,6 +86,11 @@ export interface CreateUserRequest {
 export interface AdminLibraryActionResponse {
   total: number;
   indexed?: boolean;
+}
+
+export interface AdminBookUploadResponse {
+  books: Book[];
+  total: number;
 }
 
 export type AdminMaintenanceJobStatus = 'running' | 'completed' | 'failed';

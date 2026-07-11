@@ -11,6 +11,7 @@ import {
   LucideSave,
   LucideSearch,
   LucideShield,
+  LucideUpload,
   LucideUserPlus,
   LucideUsersRound
 } from '@lucide/angular';
@@ -35,6 +36,7 @@ import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
     LucideSave,
     LucideSearch,
     LucideShield,
+    LucideUpload,
     LucideUserPlus,
     LucideUsersRound,
     LeafSpinnerComponent
@@ -52,8 +54,11 @@ export class AdminPage {
   readonly error = signal<string | null>(null);
   readonly isLoadingUsers = signal(true);
   readonly isCreatingUser = signal(false);
+  readonly isUploading = signal(false);
   readonly isRescanning = signal(false);
   readonly isReindexing = signal(false);
+  readonly selectedUploadFiles = signal<File[]>([]);
+  readonly uploadAccept = '.azw,.azw3,.epub,.mobi,.pdf,.txt';
 
   readonly userForm = new FormGroup({
     email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
@@ -111,6 +116,48 @@ export class AdminPage {
 
   reindexSearch() {
     this.runMaintenanceAction('reindex');
+  }
+
+  selectUploadFiles(event: Event) {
+    this.error.set(null);
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+
+    if (files.length > 10) {
+      this.selectedUploadFiles.set([]);
+      input.value = '';
+      this.error.set('10 fichiers maximum par upload.');
+      return;
+    }
+
+    this.selectedUploadFiles.set(files);
+  }
+
+  uploadBooks(input?: HTMLInputElement) {
+    this.error.set(null);
+    this.maintenanceMessage.set(null);
+
+    const files = this.selectedUploadFiles();
+
+    if (!files.length) {
+      this.error.set('Selectionne au moins un fichier.');
+      return;
+    }
+
+    this.isUploading.set(true);
+
+    this.adminService.uploadBooks(files).pipe(
+      finalize(() => this.isUploading.set(false))
+    ).subscribe({
+      next: ({ total }) => {
+        this.maintenanceMessage.set(`${total} livre(s) importe(s).`);
+        this.selectedUploadFiles.set([]);
+        if (input) {
+          input.value = '';
+        }
+      },
+      error: (error: unknown) => this.error.set(readApiError(error))
+    });
   }
 
   logout() {
@@ -192,5 +239,15 @@ export class AdminPage {
     this.maintenanceMessage.set(action === 'rescan'
       ? `${total} livre(s) rescannes.`
       : `${total} livre(s) reindexes dans Typesense.`);
+  }
+
+  protected uploadFileLabel() {
+    const files = this.selectedUploadFiles();
+
+    if (!files.length) {
+      return 'Aucun fichier selectionne';
+    }
+
+    return files.length === 1 ? files[0]?.name ?? '1 fichier' : `${files.length} fichiers selectionnes`;
   }
 }

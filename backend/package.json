@@ -21,6 +21,7 @@
     "jsonwebtoken": "^9.0.2",
     "jszip": "^3.10.1",
     "mongoose": "^9.7.3",
+    "multer": "^2.2.0",
     "nodemailer": "^9.0.3",
     "typesense": "^3.0.6",
     "zod": "^4.1.13"
@@ -29,6 +30,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.2.0",
     "@types/node": "^24.10.1",
     "@types/nodemailer": "^7.0.4",
     "tsx": "^4.20.6",

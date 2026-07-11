@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import os from 'node:os';
 import path from 'node:path';
 
 function resolveFromBackend(value: string): string {
@@ -39,6 +40,10 @@ export const config = {
   mongoDbName: process.env.MONGO_DB_NAME,
   ebookRoot: resolveFromBackend(process.env.EBOOK_ROOT ?? './library'),
   ebookFilenamePattern: readFilenamePattern(process.env.EBOOK_FILENAME_PATTERN),
+  ebookUploadSubdirectory: process.env.EBOOK_UPLOAD_SUBDIRECTORY ?? 'Uploads',
+  uploadTempPath: process.env.UPLOAD_TEMP_PATH ?? path.join(os.tmpdir(), 'alexandrya-uploads'),
+  uploadMaxFiles: readNumber(process.env.UPLOAD_MAX_FILES, 10, 1, 10),
+  uploadMaxFileSizeBytes: readNumber(process.env.UPLOAD_MAX_FILE_SIZE_MB, 80, 1, 1024) * 1024 * 1024,
   coverLookupEnabled: readBoolean(process.env.COVER_LOOKUP_ENABLED, true),
   coverLookupTimeoutMs: readNumber(process.env.COVER_LOOKUP_TIMEOUT_MS, 4500, 500, 30000),
   libraryScanConcurrency: readNumber(process.env.LIBRARY_SCAN_CONCURRENCY, 4, 1, 16),

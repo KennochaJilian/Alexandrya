@@ -90,6 +90,39 @@
           <h2>Maintenance</h2>
         </div>
 
+        <div class="upload-box">
+          <label class="upload-field">
+            <span>Importer des livres</span>
+            <input
+              #uploadInput
+              type="file"
+              multiple
+              [accept]="uploadAccept"
+              [disabled]="isUploading()"
+              (change)="selectUploadFiles($event)"
+            />
+          </label>
+
+          <div class="upload-summary">
+            <span>{{ uploadFileLabel() }}</span>
+            <small>10 fichiers maximum</small>
+          </div>
+
+          <button
+            type="button"
+            class="secondary-action"
+            [disabled]="isUploading() || selectedUploadFiles().length === 0"
+            (click)="uploadBooks(uploadInput)"
+          >
+            @if (isUploading()) {
+              <app-leaf-spinner [compact]="true" label="Upload"></app-leaf-spinner>
+            } @else {
+              <svg lucideUpload aria-hidden="true" [size]="18"></svg>
+            }
+            <span>{{ isUploading() ? 'Import...' : 'Importer' }}</span>
+          </button>
+        </div>
+
         <div class="maintenance-actions">
           <button type="button" class="secondary-action" [disabled]="isRescanning()" (click)="rescanLibrary()">
             @if (isRescanning()) {

@@ -18,6 +18,8 @@ export interface BookRecord {
   filePath: string;
   sizeBytes: number;
   lastScannedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const bookSchema = new Schema<BookRecord>({

@@ -19,6 +19,10 @@ services:
       MONGO_URI: mongodb://mongo:27017/alexandrya
       EBOOK_ROOT: /library
       EBOOK_FILENAME_PATTERN: ${EBOOK_FILENAME_PATTERN:-title-author}
+      EBOOK_UPLOAD_SUBDIRECTORY: ${EBOOK_UPLOAD_SUBDIRECTORY:-Uploads}
+      UPLOAD_MAX_FILES: ${UPLOAD_MAX_FILES:-10}
+      UPLOAD_MAX_FILE_SIZE_MB: ${UPLOAD_MAX_FILE_SIZE_MB:-80}
+      UPLOAD_TEMP_PATH: /tmp/alexandrya-uploads
       LIBRARY_SCAN_CONCURRENCY: ${LIBRARY_SCAN_CONCURRENCY:-4}
       COVER_LOOKUP_ENABLED: ${COVER_LOOKUP_ENABLED:-true}
       COVER_LOOKUP_TIMEOUT_MS: ${COVER_LOOKUP_TIMEOUT_MS:-4500}
@@ -38,7 +42,7 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       MAIL_FROM: ${MAIL_FROM:-}
     volumes:
-      - ${ALEXANDRYA_LIBRARY_PATH:-/srv/alexandrya/library}:/library:ro
+      - ${ALEXANDRYA_LIBRARY_PATH:-/srv/alexandrya/library}:/library
       - covers-data:/data/covers
     networks:
       - alexandrya-private

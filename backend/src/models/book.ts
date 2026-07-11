@@ -13,6 +13,7 @@ export interface Book {
   relativePath: string;
   filePath: string;
   sizeBytes: number;
+  addedAt?: string;
 }
 
 export type PublicBook = Omit<Book, 'filePath'>;

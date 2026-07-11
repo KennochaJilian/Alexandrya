@@ -7,7 +7,7 @@
 - Docker/Portainer orchestre uniquement l'API, Mongo et Typesense.
 - Mongo et Typesense ne publient aucun port public.
 - L'API publie seulement `127.0.0.1:4000`, accessible par Apache sur le VPS.
-- Les livres sont lus depuis `/srv/alexandrya/library`, monte en lecture seule dans l'API.
+- Les livres sont stockes dans `/srv/alexandrya/library`, monte en lecture-ecriture dans l'API pour permettre l'upload admin.
 
 ## Image API
 
@@ -51,6 +51,16 @@ Creer le dossier des livres sur le VPS :
 sudo mkdir -p /srv/alexandrya/library
 sudo chown -R $USER:www-data /srv/alexandrya
 sudo chmod -R 775 /srv/alexandrya
+```
+
+Si l'upload admin est active, verifier que l'utilisateur du container API peut aussi ecrire dans ce dossier. En cas d'erreur `EACCES` dans les logs API, ajouter une ACL host pour l'UID du container ou adapter le proprietaire du dossier.
+
+Variables d'upload :
+
+```env
+EBOOK_UPLOAD_SUBDIRECTORY=Uploads
+UPLOAD_MAX_FILES=10
+UPLOAD_MAX_FILE_SIZE_MB=80
 ```
 
 ## Front Angular via Apache

@@ -18,8 +18,18 @@ const ebookExtensions = new Set(['.azw', '.azw3', '.epub', '.mobi', '.pdf', '.tx
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
+export interface UploadedBookFile {
+  tempPath: string;
+  originalName: string;
+  sizeBytes: number;
+}
+
 function normalizeRelativePath(value: string): string {
   return value.replaceAll('\\', '/');
+}
+
+export function isSupportedEbookFileName(fileName: string): boolean {
+  return ebookExtensions.has(path.extname(fileName).toLowerCase());
 }
 
 function createId(relativePath: string): string {
@@ -64,6 +74,45 @@ async function fileExists(filePath: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+function sanitizeUploadFileName(fileName: string): string {
+  const extension = path.extname(fileName).toLowerCase();
+  const baseName = path.basename(fileName, extension)
+    .normalize('NFC')
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160);
+
+  return `${baseName || 'livre'}${extension}`;
+}
+
+async function resolveUniqueDestination(directory: string, fileName: string): Promise<string> {
+  const extension = path.extname(fileName);
+  const baseName = path.basename(fileName, extension);
+  let candidate = path.join(directory, fileName);
+  let counter = 2;
+
+  while (await fileExists(candidate)) {
+    candidate = path.join(directory, `${baseName} (${counter})${extension}`);
+    counter += 1;
+  }
+
+  return candidate;
+}
+
+async function moveUploadedFile(source: string, destination: string) {
+  try {
+    await fs.rename(source, destination);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EXDEV') {
+      throw error;
+    }
+
+    await fs.copyFile(source, destination);
+    await fs.unlink(source);
   }
 }
 
@@ -182,6 +231,7 @@ function toPublicBook(book: BookRecord): PublicBook {
     fileName: book.fileName,
     relativePath: book.relativePath,
     sizeBytes: book.sizeBytes,
+    addedAt: book.createdAt?.toISOString(),
     coverUrl: book.coverUrl,
     coverSource: book.coverSource
   };
@@ -280,6 +330,81 @@ function paginateBooks(books: PublicBook[], filters: BookSearchFilters): BookSea
   );
 }
 
+async function scanEbookFile(filePath: string, index = 0): Promise<PublicBook> {
+  const relativePath = normalizeRelativePath(path.relative(config.ebookRoot, filePath));
+  const publicId = createId(relativePath);
+  const fileName = path.basename(filePath);
+  const itemStartedAt = performance.now();
+
+  logger.debug('library scan item started', {
+    index,
+    relativePath
+  });
+
+  const stats = await fs.stat(filePath);
+  const inferred = parseFileName(fileName);
+  const embeddedMetadata = await readEbookMetadata(filePath);
+  const title = embeddedMetadata.title ?? inferred.title;
+  const authors = embeddedMetadata.authors.length ? embeddedMetadata.authors : inferred.authors;
+  const genres = embeddedMetadata.genres;
+  const publishedDate = embeddedMetadata.publishedDate ?? inferred.publishedDate;
+  const authorRefs = await upsertAuthors(authors);
+  const genreRefs = await upsertGenres(genres);
+  const existingBook = await BookModel.findOne({ relativePath }, { coverUrl: 1, coverSource: 1 }).lean();
+  const cover = embeddedMetadata.coverImage
+    ? await saveEmbeddedCover(publicId, embeddedMetadata.coverImage)
+    : existingBook?.coverUrl
+    ? {
+        coverUrl: existingBook.coverUrl,
+        coverSource: existingBook.coverSource
+      }
+    : await lookupBookCover({ title, authors });
+  const updateSet: Partial<BookRecord> = {
+    title,
+    authors: authorRefs.ids,
+    authorNames: authorRefs.names,
+    genres: genreRefs.ids,
+    genreNames: genreRefs.names,
+    publishedDate,
+    description: embeddedMetadata.description,
+    language: embeddedMetadata.language,
+    format: path.extname(fileName).slice(1).toLowerCase(),
+    fileName,
+    relativePath,
+    filePath,
+    sizeBytes: stats.size,
+    lastScannedAt: new Date()
+  };
+
+  if (cover?.coverUrl) {
+    updateSet.coverUrl = cover.coverUrl;
+    updateSet.coverSource = cover.coverSource;
+  }
+
+  const book = await BookModel.findOneAndUpdate(
+    { relativePath },
+    {
+      $set: updateSet,
+      $setOnInsert: {
+        publicId
+      }
+    },
+    { upsert: true, new: true }
+  ).lean();
+
+  if (!book) {
+    throw new Error(`Livre non enregistre: ${relativePath}`);
+  }
+
+  logger.debug('library scan item completed', {
+    index,
+    relativePath,
+    durationMs: Math.round(performance.now() - itemStartedAt)
+  });
+
+  return toPublicBook(book);
+}
+
 export async function refreshLibrary(): Promise<PublicBook[]> {
   const startedAt = performance.now();
   logger.info('library scan started', {
@@ -295,72 +420,7 @@ export async function refreshLibrary(): Promise<PublicBook[]> {
   });
 
   const failed = await runWithConcurrency(ebookFiles, config.libraryScanConcurrency, async (filePath, index) => {
-    const relativePath = normalizeRelativePath(path.relative(config.ebookRoot, filePath));
-    const publicId = createId(relativePath);
-    const fileName = path.basename(filePath);
-    const itemStartedAt = performance.now();
-
-    logger.debug('library scan item started', {
-      index,
-      relativePath
-    });
-
-    const stats = await fs.stat(filePath);
-    const inferred = parseFileName(fileName);
-    const embeddedMetadata = await readEbookMetadata(filePath);
-    const title = embeddedMetadata.title ?? inferred.title;
-    const authors = embeddedMetadata.authors.length ? embeddedMetadata.authors : inferred.authors;
-    const genres = embeddedMetadata.genres;
-    const publishedDate = embeddedMetadata.publishedDate ?? inferred.publishedDate;
-    const authorRefs = await upsertAuthors(authors);
-    const genreRefs = await upsertGenres(genres);
-    const existingBook = await BookModel.findOne({ relativePath }, { coverUrl: 1, coverSource: 1 }).lean();
-    const cover = embeddedMetadata.coverImage
-      ? await saveEmbeddedCover(publicId, embeddedMetadata.coverImage)
-      : existingBook?.coverUrl
-      ? {
-          coverUrl: existingBook.coverUrl,
-          coverSource: existingBook.coverSource
-        }
-      : await lookupBookCover({ title, authors });
-    const updateSet: Partial<BookRecord> = {
-      title,
-      authors: authorRefs.ids,
-      authorNames: authorRefs.names,
-      genres: genreRefs.ids,
-      genreNames: genreRefs.names,
-      publishedDate,
-      description: embeddedMetadata.description,
-      language: embeddedMetadata.language,
-      format: path.extname(fileName).slice(1).toLowerCase(),
-      fileName,
-      relativePath,
-      filePath,
-      sizeBytes: stats.size,
-      lastScannedAt: new Date()
-    };
-
-    if (cover?.coverUrl) {
-      updateSet.coverUrl = cover.coverUrl;
-      updateSet.coverSource = cover.coverSource;
-    }
-
-    await BookModel.findOneAndUpdate(
-      { relativePath },
-      {
-        $set: updateSet,
-        $setOnInsert: {
-          publicId
-        }
-      },
-      { upsert: true, new: true }
-    );
-
-    logger.debug('library scan item completed', {
-      index,
-      relativePath,
-      durationMs: Math.round(performance.now() - itemStartedAt)
-    });
+    await scanEbookFile(filePath, index);
   });
 
   const books = await findBooksInMongo({});
@@ -377,6 +437,57 @@ export async function refreshLibrary(): Promise<PublicBook[]> {
   return books;
 }
 
+export async function importUploadedBookFiles(files: UploadedBookFile[]): Promise<PublicBook[]> {
+  if (!files.length) {
+    throw new HttpError(400, 'NO_UPLOAD_FILES', 'Aucun fichier a importer.');
+  }
+
+  if (files.length > config.uploadMaxFiles) {
+    throw new HttpError(400, 'UPLOAD_LIMIT_EXCEEDED', `${config.uploadMaxFiles} fichiers maximum par upload.`);
+  }
+
+  const invalidFile = files.find((file) => !isSupportedEbookFileName(file.originalName));
+
+  if (invalidFile) {
+    throw new HttpError(400, 'UNSUPPORTED_UPLOAD_FORMAT', `Format non supporte: ${invalidFile.originalName}`);
+  }
+
+  const startedAt = performance.now();
+  const uploadDirectory = path.join(config.ebookRoot, config.ebookUploadSubdirectory);
+  await fs.mkdir(uploadDirectory, { recursive: true });
+
+  logger.info('library upload import started', {
+    totalFiles: files.length,
+    uploadDirectory
+  });
+
+  const importedBooks: PublicBook[] = [];
+
+  for (const [index, file] of files.entries()) {
+    const safeFileName = sanitizeUploadFileName(file.originalName);
+    const destination = await resolveUniqueDestination(uploadDirectory, safeFileName);
+
+    logger.info('library upload file moving', {
+      index,
+      originalName: file.originalName,
+      destination
+    });
+
+    await moveUploadedFile(file.tempPath, destination);
+    importedBooks.push(await scanEbookFile(destination, index));
+  }
+
+  await indexBooksInTypesense(importedBooks);
+
+  logger.info('library upload import completed', {
+    totalFiles: files.length,
+    totalBooks: importedBooks.length,
+    durationMs: Math.round(performance.now() - startedAt)
+  });
+
+  return importedBooks.sort((left, right) => (right.addedAt ?? '').localeCompare(left.addedAt ?? ''));
+}
+
 export async function searchBooks(filters: BookSearchFilters): Promise<BookSearchResult> {
   const typesenseBooks = await searchBooksInTypesense(filters);
 
@@ -389,7 +500,7 @@ export async function searchBooks(filters: BookSearchFilters): Promise<BookSearc
 
 async function findBooksInMongo(filters: BookSearchFilters): Promise<PublicBook[]> {
   const books = await BookModel.find(buildQuery(filters))
-    .sort({ updatedAt: -1, title: 1 })
+    .sort({ createdAt: -1, title: 1 })
     .lean();
 
   return books.map(toPublicBook);
@@ -400,7 +511,7 @@ async function searchBooksInMongo(filters: BookSearchFilters): Promise<BookSearc
   const { page, pageSize, skip } = normalizePagination(filters);
   const [books, total] = await Promise.all([
     BookModel.find(query)
-      .sort({ updatedAt: -1, title: 1 })
+      .sort({ createdAt: -1, title: 1 })
       .skip(skip)
       .limit(pageSize)
       .lean(),
