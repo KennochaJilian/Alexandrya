@@ -46,13 +46,17 @@ export class AuthService {
   }
 
   logout() {
+    this.clearSession();
+    void this.router.navigateByUrl('/login');
+  }
+
+  clearSession() {
     localStorage.removeItem(tokenStorageKey);
     localStorage.removeItem(userStorageKey);
     sessionStorage.removeItem(tokenStorageKey);
     sessionStorage.removeItem(userStorageKey);
     this.token.set(null);
     this.currentUser.set(null);
-    void this.router.navigateByUrl('/login');
   }
 
   updateProfile(payload: UpdateProfileRequest) {

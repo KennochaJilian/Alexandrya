@@ -74,7 +74,22 @@ export async function login(email: string, password: string) {
 }
 
 export async function verifyToken(token: string): Promise<PublicUser> {
-  const decoded = jwt.verify(token, config.jwtSecret) as TokenPayload & { sub: string };
+  let decoded: TokenPayload & { sub: string };
+
+  try {
+    decoded = jwt.verify(token, config.jwtSecret) as TokenPayload & { sub: string };
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new HttpError(401, 'TOKEN_EXPIRED', 'Session expiree.');
+    }
+
+    if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.NotBeforeError) {
+      throw new HttpError(401, 'TOKEN_INVALID', 'Session invalide.');
+    }
+
+    throw error;
+  }
+
   const user = await findUserById(decoded.sub);
 
   if (!user) {

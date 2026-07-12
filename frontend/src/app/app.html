@@ -1,1 +1,7 @@
 <router-outlet />
+
+@if (toast(); as toastMessage) {
+  <aside class="app-toast" [class.error]="toastMessage.kind === 'error'" role="status" aria-live="polite">
+    {{ toastMessage.message }}
+  </aside>
+}
