@@ -64,15 +64,27 @@
         </div>
       </section>
 
-      <section class="kindle-action">
-        <button type="button" (click)="sendToKindle()" [disabled]="isSending() || !currentUser()?.kindleEmail">
-          @if (isSending()) {
-            <app-leaf-spinner [compact]="true" label="Envoi"></app-leaf-spinner>
-          } @else {
-            <svg lucideSend aria-hidden="true" [size]="18"></svg>
-          }
-          <span>{{ isSending() ? 'Envoi...' : 'Envoyer au Kindle' }}</span>
-        </button>
+      <section class="book-actions-panel">
+        <div class="book-action-buttons">
+          <button type="button" class="download-action" (click)="downloadBook()" [disabled]="isDownloading()">
+            @if (isDownloading()) {
+              <app-leaf-spinner [compact]="true" label="Telechargement"></app-leaf-spinner>
+            } @else {
+              <svg lucideDownload aria-hidden="true" [size]="18"></svg>
+            }
+            <span>{{ isDownloading() ? 'Telechargement...' : 'Telecharger' }}</span>
+          </button>
+
+          <button type="button" (click)="sendToKindle()" [disabled]="isSending() || !currentUser()?.kindleEmail">
+            @if (isSending()) {
+              <app-leaf-spinner [compact]="true" label="Envoi"></app-leaf-spinner>
+            } @else {
+              <svg lucideSend aria-hidden="true" [size]="18"></svg>
+            }
+            <span>{{ isSending() ? 'Envoi...' : 'Envoyer au Kindle' }}</span>
+          </button>
+        </div>
+
         @if (!currentUser()?.kindleEmail) {
           <p class="hint">Adresse Kindle manquante pour ce compte.</p>
         }

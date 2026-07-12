@@ -5,16 +5,19 @@ import {
   LucideArrowLeft,
   LucideCalendar,
   LucideCircleUser,
+  LucideDownload,
   LucideFileText,
   LucideLogOut,
   LucideSend,
   LucideShield,
   LucideTag
 } from '@lucide/angular';
+import { finalize } from 'rxjs';
 import { readApiError } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
 import { BooksService } from '../../core/books.service';
 import { resolveCoverUrl } from '../../core/cover-url';
+import { saveBlobResponse } from '../../core/file-download';
 import type { Book } from '../../core/models';
 import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
 
@@ -26,6 +29,7 @@ import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
     LucideArrowLeft,
     LucideCalendar,
     LucideCircleUser,
+    LucideDownload,
     LucideFileText,
     LucideLogOut,
     LucideSend,
@@ -46,6 +50,7 @@ export class BookDetailPage {
   readonly isAdmin = this.auth.isAdmin;
   readonly book = signal<Book | null>(null);
   readonly isLoading = signal(true);
+  readonly isDownloading = signal(false);
   readonly isSending = signal(false);
   readonly error = signal<string | null>(null);
   readonly sentMessage = signal<string | null>(null);
@@ -59,6 +64,30 @@ export class BookDetailPage {
       error: (error: unknown) => {
         this.error.set(readApiError(error));
         this.isLoading.set(false);
+      }
+    });
+  }
+
+  downloadBook() {
+    const book = this.book();
+
+    if (!book || this.isDownloading()) {
+      return;
+    }
+
+    this.isDownloading.set(true);
+    this.error.set(null);
+    this.sentMessage.set(null);
+
+    this.booksService.downloadBook(book.id).pipe(
+      finalize(() => this.isDownloading.set(false))
+    ).subscribe({
+      next: (response) => {
+        saveBlobResponse(response, book.fileName);
+        this.sentMessage.set('Telechargement lance.');
+      },
+      error: (error: unknown) => {
+        this.error.set(readApiError(error));
       }
     });
   }

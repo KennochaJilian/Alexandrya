@@ -175,7 +175,7 @@
 
 .book-row {
   display: grid;
-  grid-template-columns: 42px 1fr;
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
   gap: 10px;
   padding: 24px 0;
 }
@@ -258,6 +258,42 @@
   width: fit-content;
 }
 
+.book-actions {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding-top: 18px;
+}
+
+.book-action-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--purple);
+  cursor: pointer;
+}
+
+.book-action-button:hover,
+.book-action-button:focus-visible {
+  outline: none;
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgb(74 6 96 / 12%);
+}
+
+.book-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+.book-action-button.kindle-button {
+  color: var(--blue);
+}
+
 .app-footer {
   position: relative;
   z-index: 1;
@@ -283,7 +319,7 @@
   }
 
   .book-row {
-    grid-template-columns: 54px 1fr;
+    grid-template-columns: 54px minmax(0, 1fr) 46px;
     gap: 16px;
   }
 
@@ -299,5 +335,10 @@
 
   .book-copy strong {
     font-size: 1.68rem;
+  }
+
+  .book-action-button {
+    width: 42px;
+    height: 42px;
   }
 }

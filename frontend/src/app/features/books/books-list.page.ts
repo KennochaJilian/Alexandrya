@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, type WritableSignal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -8,9 +8,11 @@ import {
   LucideChevronLeft,
   LucideChevronRight,
   LucideCircleUser,
+  LucideDownload,
   LucideHeart,
   LucideLogOut,
   LucideSearch,
+  LucideSend,
   LucideShield,
   LucideSlidersHorizontal,
   LucideTag
@@ -21,6 +23,7 @@ import { AuthService } from '../../core/auth.service';
 import { BooksService } from '../../core/books.service';
 import { resolveCoverUrl } from '../../core/cover-url';
 import { FavoritesService } from '../../core/favorites.service';
+import { saveBlobResponse } from '../../core/file-download';
 import type { Book, BookFilters, BookListResponse } from '../../core/models';
 import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
 
@@ -50,9 +53,11 @@ interface BooksSearchFormValue {
     LucideChevronLeft,
     LucideChevronRight,
     LucideCircleUser,
+    LucideDownload,
     LucideHeart,
     LucideLogOut,
     LucideSearch,
+    LucideSend,
     LucideShield,
     LucideSlidersHorizontal,
     LucideTag,
@@ -75,8 +80,11 @@ export class BooksListPage {
   readonly page = signal(1);
   readonly pageSize = signal(20);
   readonly totalPages = signal(0);
+  readonly downloadingBookIds = signal<Set<string>>(new Set());
+  readonly sendingBookIds = signal<Set<string>>(new Set());
   readonly isLoading = signal(true);
   readonly error = signal<string | null>(null);
+  readonly actionMessage = signal<string | null>(null);
   readonly advancedOpen = signal(false);
   readonly favoritesOnly = signal(false);
   readonly activeFilters = signal<BookFilters>({});
@@ -185,6 +193,49 @@ export class BooksListPage {
         favoritesOnly: true
       });
     }
+  }
+
+  downloadBook(book: Book) {
+    if (this.downloadingBookIds().has(book.id)) {
+      return;
+    }
+
+    this.setBookActionState(this.downloadingBookIds, book.id, true);
+    this.error.set(null);
+    this.actionMessage.set(null);
+
+    this.booksService.downloadBook(book.id).pipe(
+      finalize(() => this.setBookActionState(this.downloadingBookIds, book.id, false))
+    ).subscribe({
+      next: (response) => {
+        saveBlobResponse(response, book.fileName);
+        this.actionMessage.set('Telechargement lance.');
+      },
+      error: (error: unknown) => {
+        this.error.set(readApiError(error));
+      }
+    });
+  }
+
+  sendToKindle(book: Book) {
+    if (!this.currentUser()?.kindleEmail || this.sendingBookIds().has(book.id)) {
+      return;
+    }
+
+    this.setBookActionState(this.sendingBookIds, book.id, true);
+    this.error.set(null);
+    this.actionMessage.set(null);
+
+    this.booksService.sendToKindle(book.id).pipe(
+      finalize(() => this.setBookActionState(this.sendingBookIds, book.id, false))
+    ).subscribe({
+      next: (result) => {
+        this.actionMessage.set(`Envoi accepte vers ${result.to}.`);
+      },
+      error: (error: unknown) => {
+        this.error.set(readApiError(error));
+      }
+    });
   }
 
   goToPreviousPage() {
@@ -310,6 +361,20 @@ export class BooksListPage {
       .replace(/\p{Diacritic}/gu, '')
       .toLowerCase()
       .trim();
+  }
+
+  private setBookActionState(actionIds: WritableSignal<Set<string>>, bookId: string, isActive: boolean) {
+    actionIds.update((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      if (isActive) {
+        nextIds.add(bookId);
+      } else {
+        nextIds.delete(bookId);
+      }
+
+      return nextIds;
+    });
   }
 
   private cleanFilters(filters: Partial<BooksSearchFormValue>): BookFilters {

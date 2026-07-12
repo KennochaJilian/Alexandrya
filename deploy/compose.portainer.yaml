@@ -10,6 +10,8 @@ services:
       - typesense
     ports:
       - "127.0.0.1:${API_HOST_PORT:-4000}:4000"
+    group_add:
+      - "${ALEXANDRYA_LIBRARY_GID:-993}"
     environment:
       NODE_ENV: production
       LOG_LEVEL: ${LOG_LEVEL:-info}

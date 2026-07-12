@@ -118,13 +118,18 @@ h1 {
   margin-top: 14px;
 }
 
-.kindle-action {
+.book-actions-panel {
   display: grid;
   gap: 10px;
   margin: 6px 0 18px;
 }
 
-.kindle-action button {
+.book-action-buttons {
+  display: grid;
+  gap: 10px;
+}
+
+.book-actions-panel button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -139,7 +144,13 @@ h1 {
   box-shadow: var(--shadow);
 }
 
-.kindle-action button:disabled {
+.book-actions-panel .download-action {
+  border: 1px solid var(--line-strong);
+  background: #ffffff;
+  color: var(--purple);
+}
+
+.book-actions-panel button:disabled {
   cursor: not-allowed;
   opacity: 0.62;
 }
@@ -228,9 +239,8 @@ dd {
     font-size: 3.8rem;
   }
 
-  .kindle-action {
-    grid-template-columns: minmax(240px, 310px) 1fr;
-    align-items: center;
+  .book-action-buttons {
+    grid-template-columns: repeat(2, minmax(220px, 310px));
   }
 
   .hint {

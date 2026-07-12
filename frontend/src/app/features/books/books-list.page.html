@@ -90,6 +90,10 @@
     <p class="notice error" role="alert">{{ error() }}</p>
   }
 
+  @if (actionMessage()) {
+    <p class="notice success">{{ actionMessage() }}</p>
+  }
+
   @if (isLoading()) {
     <div class="loading-panel">
       <app-leaf-spinner label="Recherche des livres"></app-leaf-spinner>
@@ -138,6 +142,38 @@
               }
             </span>
           </a>
+
+          <div class="book-actions" role="group" aria-label="Actions du livre">
+            <button
+              type="button"
+              class="book-action-button"
+              [disabled]="downloadingBookIds().has(book.id)"
+              [title]="'Telecharger ' + book.title"
+              [attr.aria-label]="'Telecharger ' + book.title"
+              (click)="downloadBook(book)"
+            >
+              @if (downloadingBookIds().has(book.id)) {
+                <app-leaf-spinner [compact]="true" label="Telechargement"></app-leaf-spinner>
+              } @else {
+                <svg lucideDownload aria-hidden="true" [size]="18"></svg>
+              }
+            </button>
+
+            <button
+              type="button"
+              class="book-action-button kindle-button"
+              [disabled]="sendingBookIds().has(book.id) || !currentUser()?.kindleEmail"
+              [title]="currentUser()?.kindleEmail ? 'Envoyer au Kindle' : 'Adresse Kindle manquante'"
+              [attr.aria-label]="'Envoyer ' + book.title + ' au Kindle'"
+              (click)="sendToKindle(book)"
+            >
+              @if (sendingBookIds().has(book.id)) {
+                <app-leaf-spinner [compact]="true" label="Envoi"></app-leaf-spinner>
+              } @else {
+                <svg lucideSend aria-hidden="true" [size]="18"></svg>
+              }
+            </button>
+          </div>
         </article>
       }
     </section>

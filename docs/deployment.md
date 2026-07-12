@@ -43,6 +43,7 @@ CORS_ORIGIN=https://alexandrya.aquarius.irish
 JWT_SECRET=long-secret
 TYPESENSE_API_KEY=long-typesense-secret
 ALEXANDRYA_LIBRARY_PATH=/srv/alexandrya/library
+ALEXANDRYA_LIBRARY_GID=993
 ```
 
 Creer le dossier des livres sur le VPS :
@@ -54,6 +55,20 @@ sudo chmod -R 775 /srv/alexandrya
 ```
 
 Si l'upload admin est active, verifier que l'utilisateur du container API peut aussi ecrire dans ce dossier. En cas d'erreur `EACCES` dans les logs API, ajouter une ACL host pour l'UID du container ou adapter le proprietaire du dossier.
+
+Le plus simple avec le SFTP existant est d'ajouter le container API au groupe Linux proprietaire du dossier bibliotheque. Recuperer le GID sur le VPS :
+
+```bash
+stat -c '%g' /srv/alexandrya/library
+```
+
+Puis renseigner ce GID dans Portainer :
+
+```env
+ALEXANDRYA_LIBRARY_GID=993
+```
+
+La stack utilise `group_add` pour donner ce groupe au process Node dans le container.
 
 Variables d'upload :
 
