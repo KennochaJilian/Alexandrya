@@ -3,20 +3,20 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   LucideArrowLeft,
-  LucideCalendar,
   LucideCircleUser,
   LucideDownload,
-  LucideFileText,
-  LucideLogOut,
+  LucideHeart,
+  LucideMenu,
   LucideSend,
   LucideShield,
-  LucideTag
+  LucideX
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
 import { readApiError } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
 import { BooksService } from '../../core/books.service';
 import { resolveCoverUrl } from '../../core/cover-url';
+import { FavoritesService } from '../../core/favorites.service';
 import { saveBlobResponse } from '../../core/file-download';
 import type { Book } from '../../core/models';
 import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
@@ -27,14 +27,13 @@ import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
     CommonModule,
     RouterLink,
     LucideArrowLeft,
-    LucideCalendar,
     LucideCircleUser,
     LucideDownload,
-    LucideFileText,
-    LucideLogOut,
+    LucideHeart,
+    LucideMenu,
     LucideSend,
     LucideShield,
-    LucideTag,
+    LucideX,
     LeafSpinnerComponent
   ],
   templateUrl: './book-detail.page.html',
@@ -44,16 +43,20 @@ export class BookDetailPage {
   private readonly route = inject(ActivatedRoute);
   private readonly booksService = inject(BooksService);
   private readonly auth = inject(AuthService);
+  private readonly favoritesService = inject(FavoritesService);
   private readonly bookId = this.route.snapshot.paramMap.get('id') ?? '';
 
   readonly currentUser = this.auth.currentUser;
   readonly isAdmin = this.auth.isAdmin;
+  readonly favoriteIds = this.favoritesService.favoriteIds;
   readonly book = signal<Book | null>(null);
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
   readonly isSending = signal(false);
   readonly error = signal<string | null>(null);
   readonly sentMessage = signal<string | null>(null);
+  readonly menuOpen = signal(false);
+  readonly descriptionExpanded = signal(false);
 
   constructor() {
     this.booksService.getBook(this.bookId).subscribe({
@@ -95,7 +98,7 @@ export class BookDetailPage {
   sendToKindle() {
     const book = this.book();
 
-    if (!book) {
+    if (!book || !this.currentUser()?.kindleEmail || this.isSending()) {
       return;
     }
 
@@ -103,20 +106,48 @@ export class BookDetailPage {
     this.error.set(null);
     this.sentMessage.set(null);
 
-    this.booksService.sendToKindle(book.id).subscribe({
+    this.booksService.sendToKindle(book.id).pipe(
+      finalize(() => this.isSending.set(false))
+    ).subscribe({
       next: (result) => {
         this.sentMessage.set(`Envoi accepte vers ${result.to}.`);
-        this.isSending.set(false);
       },
       error: (error: unknown) => {
         this.error.set(readApiError(error));
-        this.isSending.set(false);
       }
     });
   }
 
+  toggleFavorite(book: Book) {
+    this.favoritesService.toggle(book);
+  }
+
+  toggleCurrentBookFavorite() {
+    const book = this.book();
+
+    if (book) {
+      this.toggleFavorite(book);
+    }
+  }
+
   logout() {
     this.auth.logout();
+  }
+
+  toggleMenu() {
+    this.menuOpen.update((isOpen) => !isOpen);
+  }
+
+  closeMenu() {
+    this.menuOpen.set(false);
+  }
+
+  clearMessage() {
+    this.sentMessage.set(null);
+  }
+
+  toggleDescription() {
+    this.descriptionExpanded.update((isExpanded) => !isExpanded);
   }
 
   bookInitial(book: Book): string {
@@ -136,15 +167,57 @@ export class BookDetailPage {
   }
 
   formatGenres(book: Book): string {
-    return book.genres.length ? book.genres.join(', ') : 'Non renseigné';
+    return book.genres.length ? book.genres.join(', ') : 'Non renseigne';
   }
 
   formatDate(book: Book): string {
-    return book.publishedDate?.slice(0, 10) ?? 'Non renseignée';
+    return book.publishedDate?.slice(0, 10) ?? 'Non renseignee';
+  }
+
+  formatYear(book: Book): string {
+    return book.publishedDate?.slice(0, 4) ?? 'Non renseigne';
+  }
+
+  formatLanguage(book: Book): string {
+    return book.language?.toUpperCase() ?? 'FR';
   }
 
   formatSize(book: Book): string {
     const megaBytes = book.sizeBytes / 1024 / 1024;
     return `${megaBytes.toFixed(1)} Mo`;
+  }
+
+  formatAddedAt(book: Book): string {
+    if (!book.addedAt) {
+      return 'Non renseigne';
+    }
+
+    const addedAt = new Date(book.addedAt);
+
+    if (Number.isNaN(addedAt.getTime())) {
+      return book.addedAt;
+    }
+
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(addedAt);
+  }
+
+  displayDescription(book: Book): string {
+    const description = book.description?.trim() ?? '';
+
+    if (this.descriptionExpanded() || description.length <= 520) {
+      return description;
+    }
+
+    return `${description.slice(0, 520).trim()}...`;
+  }
+
+  hasLongDescription(book: Book): boolean {
+    return (book.description?.trim().length ?? 0) > 520;
   }
 }

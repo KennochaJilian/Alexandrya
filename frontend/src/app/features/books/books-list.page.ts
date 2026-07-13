@@ -4,18 +4,16 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
-  LucideBookOpen,
   LucideChevronLeft,
   LucideChevronRight,
   LucideCircleUser,
   LucideDownload,
   LucideHeart,
-  LucideLogOut,
+  LucideMenu,
   LucideSearch,
   LucideSend,
   LucideShield,
-  LucideSlidersHorizontal,
-  LucideTag
+  LucideSlidersHorizontal
 } from '@lucide/angular';
 import { catchError, debounceTime, finalize, of, startWith, Subject, switchMap } from 'rxjs';
 import { readApiError } from '../../core/api-error';
@@ -49,18 +47,16 @@ interface BooksSearchFormValue {
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
-    LucideBookOpen,
     LucideChevronLeft,
     LucideChevronRight,
     LucideCircleUser,
     LucideDownload,
     LucideHeart,
-    LucideLogOut,
+    LucideMenu,
     LucideSearch,
     LucideSend,
     LucideShield,
     LucideSlidersHorizontal,
-    LucideTag,
     LeafSpinnerComponent
   ],
   templateUrl: './books-list.page.html',
@@ -78,7 +74,7 @@ export class BooksListPage {
   readonly books = signal<Book[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
-  readonly pageSize = signal(20);
+  readonly pageSize = signal(5);
   readonly totalPages = signal(0);
   readonly downloadingBookIds = signal<Set<string>>(new Set());
   readonly sendingBookIds = signal<Set<string>>(new Set());
@@ -86,6 +82,7 @@ export class BooksListPage {
   readonly error = signal<string | null>(null);
   readonly actionMessage = signal<string | null>(null);
   readonly advancedOpen = signal(false);
+  readonly menuOpen = signal(false);
   readonly favoritesOnly = signal(false);
   readonly activeFilters = signal<BookFilters>({});
   readonly hasActiveFilters = computed(() => Object.keys(this.activeFilters()).length > 0 || this.favoritesOnly());
@@ -94,6 +91,28 @@ export class BooksListPage {
   readonly canGoNext = computed(() => this.page() < this.totalPages() && !this.isLoading());
   readonly pageStart = computed(() => this.total() ? ((this.page() - 1) * this.pageSize()) + 1 : 0);
   readonly pageEnd = computed(() => Math.min(this.total(), this.page() * this.pageSize()));
+  readonly visiblePages = computed(() => {
+    const totalPages = this.totalPages();
+
+    if (!totalPages) {
+      return [];
+    }
+
+    const maxVisiblePages = 5;
+
+    if (totalPages <= maxVisiblePages) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    const halfWindow = Math.floor(maxVisiblePages / 2);
+    let start = Math.max(1, this.page() - halfWindow);
+    let end = Math.min(totalPages, start + maxVisiblePages - 1);
+
+    start = Math.max(1, end - maxVisiblePages + 1);
+    end = Math.min(totalPages, start + maxVisiblePages - 1);
+
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  });
 
   readonly filters = new FormGroup({
     q: new FormControl('', { nonNullable: true }),
@@ -161,6 +180,14 @@ export class BooksListPage {
 
   logout() {
     this.auth.logout();
+  }
+
+  toggleMenu() {
+    this.menuOpen.update((isOpen) => !isOpen);
+  }
+
+  closeMenu() {
+    this.menuOpen.set(false);
   }
 
   toggleAdvancedFilters() {
@@ -246,6 +273,10 @@ export class BooksListPage {
     this.goToPage(this.page() + 1);
   }
 
+  goToPageNumber(page: number) {
+    this.goToPage(page);
+  }
+
   formatAuthors(book: Book): string {
     return book.authors.length ? book.authors.join(', ') : 'Auteur inconnu';
   }
@@ -257,7 +288,7 @@ export class BooksListPage {
       book.format.toUpperCase()
     ].filter(Boolean);
 
-    return parts.join(' • ');
+    return parts.join(' | ');
   }
 
   primaryGenre(book: Book): string | null {

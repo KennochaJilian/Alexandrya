@@ -7,7 +7,7 @@ import {
   LucideCircleUser,
   LucideHeart,
   LucideKeyRound,
-  LucideLogOut,
+  LucideMenu,
   LucideSave,
   LucideSend,
   LucideShield
@@ -29,7 +29,7 @@ import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
     LucideCircleUser,
     LucideHeart,
     LucideKeyRound,
-    LucideLogOut,
+    LucideMenu,
     LucideSave,
     LucideSend,
     LucideShield,
@@ -48,6 +48,7 @@ export class ProfilePage {
   readonly isSubmitting = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
+  readonly menuOpen = signal(false);
 
   readonly form = new FormGroup({
     name: new FormControl(this.currentUser()?.name ?? '', { nonNullable: true }),
@@ -112,6 +113,14 @@ export class ProfilePage {
 
   logout() {
     this.auth.logout();
+  }
+
+  toggleMenu() {
+    this.menuOpen.update((isOpen) => !isOpen);
+  }
+
+  closeMenu() {
+    this.menuOpen.set(false);
   }
 
   removeFavorite(bookId: string) {

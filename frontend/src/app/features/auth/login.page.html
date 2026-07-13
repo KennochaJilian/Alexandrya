@@ -1,23 +1,30 @@
 <main class="login-shell">
-  <img class="ivy-corner" src="/assets/ivy-branch.svg" alt="" aria-hidden="true" />
-  <img class="decor-corner" src="/assets/petal-corner.svg" alt="" aria-hidden="true" />
-
   <section class="brand" aria-label="Alexandrya">
-    <h1>Alexandrya</h1>
-    <img class="brand-mark" src="/assets/alexandrya-mark.svg" alt="" aria-hidden="true" />
+    <img
+      class="brand-art"
+      src="/assets/alexandrya-login-logo.webp"
+      alt="Alexandrya, votre bibliotheque, vos histoires."
+    />
   </section>
 
   <form class="login-panel" [formGroup]="form" (ngSubmit)="submit()">
+    <h1>Connexion a votre compte</h1>
+
     <label class="field">
-      <span class="sr-only">Email</span>
-      <svg lucideMail aria-hidden="true" [size]="18"></svg>
-      <input type="email" autocomplete="email" formControlName="email" placeholder="Email" />
+      <span>Email</span>
+      <span class="control">
+        <svg lucideMail aria-hidden="true" [size]="18"></svg>
+        <input type="email" autocomplete="email" formControlName="email" placeholder="votre@email.com" />
+      </span>
     </label>
 
     <label class="field">
-      <span class="sr-only">Mot de passe</span>
-      <svg lucideLockKeyhole aria-hidden="true" [size]="18"></svg>
-      <input type="password" autocomplete="current-password" formControlName="password" placeholder="Mot de passe" />
+      <span>Mot de passe</span>
+      <span class="control">
+        <svg lucideLockKeyhole aria-hidden="true" [size]="18"></svg>
+        <input type="password" autocomplete="current-password" formControlName="password" placeholder="Mot de passe" />
+        <svg lucideEyeOff class="control-trailing" aria-hidden="true" [size]="18"></svg>
+      </span>
     </label>
 
     <label class="remember">
@@ -33,7 +40,7 @@
       @if (isSubmitting()) {
         <app-leaf-spinner [compact]="true" label="Connexion"></app-leaf-spinner>
       } @else {
-        <svg lucideLogIn aria-hidden="true" [size]="18"></svg>
+        <svg lucideArrowRight aria-hidden="true" [size]="20"></svg>
       }
       <span>{{ isSubmitting() ? 'Connexion...' : 'Se connecter' }}</span>
     </button>
@@ -41,6 +48,6 @@
 
   <footer class="app-footer">
     <span>Mentions legales</span>
-    <span>Copyright © 2026 - Aquarius</span>
+    <span>&copy; 2026 - Aquarius</span>
   </footer>
 </main>

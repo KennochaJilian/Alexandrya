@@ -2,14 +2,22 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { LucideLockKeyhole, LucideLogIn, LucideMail } from '@lucide/angular';
+import { LucideArrowRight, LucideEyeOff, LucideLockKeyhole, LucideMail } from '@lucide/angular';
 import { readApiError } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
 import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
 
 @Component({
   selector: 'app-login-page',
-  imports: [CommonModule, ReactiveFormsModule, LucideLockKeyhole, LucideLogIn, LucideMail, LeafSpinnerComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    LucideArrowRight,
+    LucideEyeOff,
+    LucideLockKeyhole,
+    LucideMail,
+    LeafSpinnerComponent
+  ],
   templateUrl: './login.page.html',
   styleUrl: './login.page.scss'
 })

@@ -6,7 +6,7 @@ import {
   LucideArrowLeft,
   LucideCircleUser,
   LucideDatabase,
-  LucideLogOut,
+  LucideMenu,
   LucideRefreshCw,
   LucideSave,
   LucideSearch,
@@ -31,7 +31,7 @@ import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
     LucideArrowLeft,
     LucideCircleUser,
     LucideDatabase,
-    LucideLogOut,
+    LucideMenu,
     LucideRefreshCw,
     LucideSave,
     LucideSearch,
@@ -52,11 +52,13 @@ export class AdminPage {
   readonly userMessage = signal<string | null>(null);
   readonly maintenanceMessage = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+  readonly currentUser = this.auth.currentUser;
   readonly isLoadingUsers = signal(true);
   readonly isCreatingUser = signal(false);
   readonly isUploading = signal(false);
   readonly isRescanning = signal(false);
   readonly isReindexing = signal(false);
+  readonly menuOpen = signal(false);
   readonly selectedUploadFiles = signal<File[]>([]);
   readonly uploadAccept = '.azw,.azw3,.epub,.mobi,.pdf,.txt';
 
@@ -162,6 +164,14 @@ export class AdminPage {
 
   logout() {
     this.auth.logout();
+  }
+
+  toggleMenu() {
+    this.menuOpen.update((isOpen) => !isOpen);
+  }
+
+  closeMenu() {
+    this.menuOpen.set(false);
   }
 
   private loadUsers() {

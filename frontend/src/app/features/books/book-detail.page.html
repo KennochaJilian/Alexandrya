@@ -7,136 +7,184 @@
 
     <div class="header-actions">
       @if (isAdmin()) {
-        <a class="icon-button" routerLink="/admin" title="Administration">
-          <svg lucideShield aria-hidden="true" [size]="24"></svg>
+        <a class="icon-button admin-button" routerLink="/admin" title="Administration">
+          <svg lucideShield aria-hidden="true" [size]="21"></svg>
         </a>
       }
-      <a class="icon-button user-button" routerLink="/profile" [title]="currentUser()?.email || 'Compte'">
-        <svg lucideCircleUser aria-hidden="true" [size]="28"></svg>
-      </a>
-      <button type="button" class="icon-button" title="Se deconnecter" (click)="logout()">
-        <svg lucideLogOut aria-hidden="true" [size]="26"></svg>
+
+      <button
+        type="button"
+        class="icon-button"
+        title="Favori"
+        [class.is-active]="book() && favoriteIds().has(book()!.id)"
+        [disabled]="!book()"
+        [attr.aria-pressed]="book() ? favoriteIds().has(book()!.id) : false"
+        (click)="toggleCurrentBookFavorite()"
+      >
+        <svg lucideHeart aria-hidden="true" [size]="22"></svg>
       </button>
+
+      <a class="icon-button user-button" routerLink="/profile" [title]="currentUser()?.email || 'Compte'">
+        <svg lucideCircleUser aria-hidden="true" [size]="24"></svg>
+      </a>
+
+      <div class="menu-wrap">
+        <button
+          type="button"
+          class="icon-button"
+          title="Menu"
+          [attr.aria-expanded]="menuOpen()"
+          (click)="toggleMenu()"
+        >
+          <svg lucideMenu aria-hidden="true" [size]="25"></svg>
+        </button>
+
+        @if (menuOpen()) {
+          <div class="user-menu" role="menu">
+            @if (isAdmin()) {
+              <a routerLink="/admin" role="menuitem" (click)="closeMenu()">
+                <svg lucideShield aria-hidden="true" [size]="16"></svg>
+                <span>Administration</span>
+              </a>
+            }
+            <a routerLink="/profile" role="menuitem" (click)="closeMenu()">
+              <svg lucideCircleUser aria-hidden="true" [size]="16"></svg>
+              <span>Mon profil</span>
+            </a>
+            <button type="button" role="menuitem" (click)="logout()">
+              <span>Se deconnecter</span>
+            </button>
+          </div>
+        }
+      </div>
     </div>
   </header>
 
-  <img class="ivy-corner" src="/assets/ivy-branch.svg" alt="" aria-hidden="true" />
-
   <section class="detail-shell">
     <a class="back-link" routerLink="/books">
-      <svg lucideArrowLeft aria-hidden="true" [size]="18"></svg>
-      <span>Retour</span>
+      <svg lucideArrowLeft aria-hidden="true" [size]="16"></svg>
+      <span>Retour &agrave; la liste</span>
     </a>
 
     @if (isLoading()) {
       <div class="loading-panel">
-        <app-leaf-spinner label="Ouverture du livre"></app-leaf-spinner>
+        <app-leaf-spinner label="Chargement"></app-leaf-spinner>
       </div>
     } @else if (error() && !book()) {
       <p class="notice error" role="alert">{{ error() }}</p>
     } @else if (book(); as book) {
       <section class="book-hero">
-        <span class="cover" aria-hidden="true">
+        <span class="detail-cover">
           @if (coverSrc(book); as coverUrl) {
-            <img [src]="coverUrl" alt="" referrerpolicy="no-referrer" />
+            <img [src]="coverUrl" [alt]="'Couverture de ' + book.title" referrerpolicy="no-referrer" />
           } @else {
-            <span>{{ bookInitial(book) }}</span>
+            <span aria-hidden="true">{{ bookInitial(book) }}</span>
           }
         </span>
 
         <div class="hero-copy">
-          <p class="format">{{ book.format.toUpperCase() }}</p>
           <h1>{{ book.title }}</h1>
-          <p class="authors">Par <b>{{ formatAuthors(book) }}</b></p>
+          <p class="authors">{{ formatAuthors(book) }}</p>
 
           <div class="chips">
+            <span>{{ formatYear(book) }}</span>
+            <span>{{ formatLanguage(book) }}</span>
+            <span>{{ book.format.toUpperCase() }}</span>
             @if (primaryGenre(book); as genre) {
-              <span class="genre-chip">
-                <svg lucideTag aria-hidden="true" [size]="14"></svg>
-                {{ genre }}
-              </span>
+              <span class="genre-chip">{{ genre }}</span>
             }
-            <span class="genre-chip muted">
-              <svg lucideCalendar aria-hidden="true" [size]="14"></svg>
-              {{ formatDate(book) }}
-            </span>
           </div>
         </div>
       </section>
 
-      <section class="book-actions-panel">
+      <section class="book-actions-panel" aria-label="Actions du livre">
         <div class="book-action-buttons">
           <button type="button" class="download-action" (click)="downloadBook()" [disabled]="isDownloading()">
             @if (isDownloading()) {
               <app-leaf-spinner [compact]="true" label="Telechargement"></app-leaf-spinner>
             } @else {
-              <svg lucideDownload aria-hidden="true" [size]="18"></svg>
+              <svg lucideDownload aria-hidden="true" [size]="17"></svg>
             }
             <span>{{ isDownloading() ? 'Telechargement...' : 'Telecharger' }}</span>
           </button>
 
-          <button type="button" (click)="sendToKindle()" [disabled]="isSending() || !currentUser()?.kindleEmail">
+          <button type="button" class="kindle-action" (click)="sendToKindle()" [disabled]="isSending() || !currentUser()?.kindleEmail">
             @if (isSending()) {
               <app-leaf-spinner [compact]="true" label="Envoi"></app-leaf-spinner>
             } @else {
-              <svg lucideSend aria-hidden="true" [size]="18"></svg>
+              <svg lucideSend aria-hidden="true" [size]="17"></svg>
             }
-            <span>{{ isSending() ? 'Envoi...' : 'Envoyer au Kindle' }}</span>
+            <span>{{ isSending() ? 'Envoi...' : 'Envoyer vers Kindle' }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="favorite-button favorite-action"
+            [class.is-favorite]="favoriteIds().has(book.id)"
+            [attr.aria-pressed]="favoriteIds().has(book.id)"
+            [title]="favoriteIds().has(book.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+            (click)="toggleFavorite(book)"
+          >
+            <svg lucideHeart aria-hidden="true" [size]="21"></svg>
           </button>
         </div>
-
-        @if (!currentUser()?.kindleEmail) {
-          <p class="hint">Adresse Kindle manquante pour ce compte.</p>
-        }
       </section>
-
-      @if (sentMessage()) {
-        <p class="notice success">{{ sentMessage() }}</p>
-      }
 
       @if (error()) {
         <p class="notice error" role="alert">{{ error() }}</p>
       }
 
-      <dl class="metadata">
-        <div>
-          <dt>Publication</dt>
-          <dd>{{ formatDate(book) }}</dd>
-        </div>
-        <div>
-          <dt>Genres</dt>
-          <dd>{{ formatGenres(book) }}</dd>
-        </div>
-        <div>
-          <dt>Fichier</dt>
-          <dd>{{ book.fileName }}</dd>
-        </div>
-        <div>
-          <dt>Taille</dt>
-          <dd>{{ formatSize(book) }}</dd>
-        </div>
-        <div class="wide">
-          <dt>Chemin</dt>
-          <dd>{{ book.relativePath }}</dd>
-        </div>
-      </dl>
-
       @if (book.description) {
         <section class="description">
-          <h2>
-            <svg lucideFileText aria-hidden="true" [size]="18"></svg>
-            <span>Résumé</span>
-          </h2>
-          <p>{{ book.description }}</p>
+          <h2>R&eacute;sum&eacute;</h2>
+          <p>{{ displayDescription(book) }}</p>
+          @if (hasLongDescription(book)) {
+            <button type="button" class="read-more" (click)="toggleDescription()">
+              <span>{{ descriptionExpanded() ? 'Lire moins' : 'Lire plus' }}</span>
+            </button>
+          }
         </section>
+      }
+
+      <section class="metadata-section">
+        <h2>Informations</h2>
+        <dl class="metadata">
+          <div>
+            <dt>Genres</dt>
+            <dd>{{ formatGenres(book) }}</dd>
+          </div>
+          <div>
+            <dt>Fichier</dt>
+            <dd>{{ book.fileName }}</dd>
+          </div>
+          <div>
+            <dt>Taille</dt>
+            <dd>{{ formatSize(book) }}</dd>
+          </div>
+          <div>
+            <dt>Chemin relatif</dt>
+            <dd>{{ book.relativePath }}</dd>
+          </div>
+          <div>
+            <dt>Ajout&eacute; le</dt>
+            <dd>{{ formatAddedAt(book) }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      @if (sentMessage()) {
+        <p class="notice success">
+          <span>{{ sentMessage() }}</span>
+          <button type="button" aria-label="Fermer le message" (click)="clearMessage()">
+            <svg lucideX aria-hidden="true" [size]="17"></svg>
+          </button>
+        </p>
       }
     }
   </section>
 
   <footer class="app-footer">
     <span>Mentions legales</span>
-    <span>Copyright © 2026 - Aquarius</span>
+    <span>&copy; 2026 - Aquarius</span>
   </footer>
-
-  <img class="decor-corner" src="/assets/petal-corner.svg" alt="" aria-hidden="true" />
 </main>
