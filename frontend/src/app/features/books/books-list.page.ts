@@ -13,9 +13,11 @@ import {
   LucideSearch,
   LucideSend,
   LucideShield,
-  LucideSlidersHorizontal
+  LucideSlidersHorizontal,
+  LucideTrash2
 } from '@lucide/angular';
 import { catchError, debounceTime, finalize, of, startWith, Subject, switchMap } from 'rxjs';
+import { AdminService } from '../../core/admin.service';
 import { readApiError } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
 import { BooksService } from '../../core/books.service';
@@ -57,6 +59,7 @@ interface BooksSearchFormValue {
     LucideSend,
     LucideShield,
     LucideSlidersHorizontal,
+    LucideTrash2,
     LeafSpinnerComponent
   ],
   templateUrl: './books-list.page.html',
@@ -64,6 +67,7 @@ interface BooksSearchFormValue {
 })
 export class BooksListPage {
   private readonly booksService = inject(BooksService);
+  private readonly adminService = inject(AdminService);
   private readonly auth = inject(AuthService);
   private readonly favoritesService = inject(FavoritesService);
   private readonly searchRequests = new Subject<BooksSearchRequest>();
@@ -78,6 +82,7 @@ export class BooksListPage {
   readonly totalPages = signal(0);
   readonly downloadingBookIds = signal<Set<string>>(new Set());
   readonly sendingBookIds = signal<Set<string>>(new Set());
+  readonly deletingBookIds = signal<Set<string>>(new Set());
   readonly isLoading = signal(true);
   readonly error = signal<string | null>(null);
   readonly actionMessage = signal<string | null>(null);
@@ -265,6 +270,35 @@ export class BooksListPage {
     });
   }
 
+  deleteBook(book: Book) {
+    if (!this.isAdmin() || this.deletingBookIds().has(book.id)) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Supprimer definitivement "${book.title}" ? Le fichier ebook sera aussi supprime du serveur.`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.setBookActionState(this.deletingBookIds, book.id, true);
+    this.error.set(null);
+    this.actionMessage.set(null);
+
+    this.adminService.deleteBook(book.id).pipe(
+      finalize(() => this.setBookActionState(this.deletingBookIds, book.id, false))
+    ).subscribe({
+      next: () => {
+        this.favoritesService.remove(book.id);
+        this.actionMessage.set(`Livre "${book.title}" supprime.`);
+        this.refreshAfterDeletion();
+      },
+      error: (error: unknown) => {
+        this.error.set(readApiError(error));
+      }
+    });
+  }
+
   goToPreviousPage() {
     this.goToPage(this.page() - 1);
   }
@@ -310,6 +344,19 @@ export class BooksListPage {
     if (nextPage === this.page()) {
       return;
     }
+
+    this.page.set(nextPage);
+    this.searchRequests.next({
+      filters: this.activeFilters(),
+      page: nextPage,
+      favoritesOnly: this.favoritesOnly()
+    });
+  }
+
+  private refreshAfterDeletion() {
+    const nextTotal = Math.max(0, this.total() - 1);
+    const nextTotalPages = Math.max(1, Math.ceil(nextTotal / this.pageSize()));
+    const nextPage = Math.min(this.page(), nextTotalPages);
 
     this.page.set(nextPage);
     this.searchRequests.next({

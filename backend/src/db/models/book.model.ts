@@ -16,6 +16,7 @@ export interface BookRecord {
   fileName: string;
   relativePath: string;
   filePath: string;
+  fileHash?: string;
   sizeBytes: number;
   lastScannedAt: Date;
   createdAt: Date;
@@ -80,6 +81,10 @@ const bookSchema = new Schema<BookRecord>({
   filePath: {
     type: String,
     required: true
+  },
+  fileHash: {
+    type: String,
+    index: true
   },
   sizeBytes: {
     type: Number,

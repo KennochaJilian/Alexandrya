@@ -261,6 +261,31 @@ export async function indexBooksInTypesense(books: PublicBook[]): Promise<boolea
   }
 }
 
+export async function deleteBookFromTypesense(id: string): Promise<boolean> {
+  const clientInstance = getClient();
+
+  if (!clientInstance) {
+    return false;
+  }
+
+  try {
+    await ensureCollection(clientInstance);
+    await clientInstance
+      .collections<BookSearchDocument>(config.typesense.collection)
+      .documents(id)
+      .delete();
+
+    return true;
+  } catch (error) {
+    if (error instanceof Errors.ObjectNotFound) {
+      return true;
+    }
+
+    warnTypesenseUnavailable('suppression', error);
+    return false;
+  }
+}
+
 export async function searchBooksInTypesense(filters: BookSearchFilters): Promise<PublicBook[] | null> {
   const clientInstance = getClient();
 

@@ -1,7 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
-import type { AdminBookUploadResponse, AdminMaintenanceJobResponse, CreateUserRequest, UserListResponse, UserResponse } from './models';
+import type {
+  AdminBookDeleteResponse,
+  AdminBookUploadResponse,
+  AdminMaintenanceJobResponse,
+  CreateUserRequest,
+  UserListResponse,
+  UserResponse
+} from './models';
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
@@ -21,6 +28,10 @@ export class AdminService {
     files.forEach((file) => formData.append('files', file));
 
     return this.http.post<AdminBookUploadResponse>(`${environment.apiUrl}/admin/library/upload`, formData);
+  }
+
+  deleteBook(id: string) {
+    return this.http.delete<AdminBookDeleteResponse>(`${environment.apiUrl}/admin/books/${id}`);
   }
 
   rescanLibrary() {

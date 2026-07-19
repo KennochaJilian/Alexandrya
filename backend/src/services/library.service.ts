@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { type Types } from 'mongoose';
@@ -11,7 +12,7 @@ import type { Book, BookSearchFilters, BookSearchResult, PublicBook } from '../m
 import { slugify } from '../utils/slug.js';
 import { lookupBookCover } from './cover-lookup.service.js';
 import { type EmbeddedCoverImage, readEbookMetadata } from './ebook-metadata.service.js';
-import { indexBooksInTypesense, searchBooksInTypesense } from './typesense.service.js';
+import { deleteBookFromTypesense, indexBooksInTypesense, searchBooksInTypesense } from './typesense.service.js';
 import { logger, serializeError } from '../utils/logger.js';
 
 const ebookExtensions = new Set(['.azw', '.azw3', '.epub', '.mobi', '.pdf', '.txt']);
@@ -22,6 +23,13 @@ export interface UploadedBookFile {
   tempPath: string;
   originalName: string;
   sizeBytes: number;
+}
+
+export interface DeletedBookResult {
+  book: PublicBook;
+  fileDeleted: boolean;
+  coverDeleted: boolean;
+  indexed: boolean;
 }
 
 function normalizeRelativePath(value: string): string {
@@ -75,6 +83,63 @@ async function fileExists(filePath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function calculateFileHash(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha256');
+    const stream = createReadStream(filePath);
+
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('error', reject);
+    stream.on('end', () => resolve(hash.digest('hex')));
+  });
+}
+
+function isPathInside(childPath: string, parentPath: string): boolean {
+  const relative = path.relative(path.resolve(parentPath), path.resolve(childPath));
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+async function deleteFileIfPresent(filePath: string): Promise<boolean> {
+  try {
+    await fs.unlink(filePath);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
+async function deleteBookFile(book: BookRecord): Promise<boolean> {
+  if (!isPathInside(book.filePath, config.ebookRoot)) {
+    throw new HttpError(500, 'BOOK_FILE_OUTSIDE_LIBRARY', 'Le fichier du livre est en dehors de la bibliotheque.');
+  }
+
+  return deleteFileIfPresent(book.filePath);
+}
+
+async function deleteLocalCover(book: BookRecord): Promise<boolean> {
+  if (!book.coverUrl?.startsWith(`${config.coverPublicPath}/`)) {
+    return false;
+  }
+
+  const coverFileName = path.basename(book.coverUrl.split('?')[0] ?? '');
+
+  if (!coverFileName) {
+    return false;
+  }
+
+  const coverPath = path.join(config.coverStoragePath, coverFileName);
+
+  if (!isPathInside(coverPath, config.coverStoragePath)) {
+    return false;
+  }
+
+  return deleteFileIfPresent(coverPath);
 }
 
 function sanitizeUploadFileName(fileName: string): string {
@@ -342,6 +407,7 @@ async function scanEbookFile(filePath: string, index = 0): Promise<PublicBook> {
   });
 
   const stats = await fs.stat(filePath);
+  const fileHash = await calculateFileHash(filePath);
   const inferred = parseFileName(fileName);
   const embeddedMetadata = await readEbookMetadata(filePath);
   const title = embeddedMetadata.title ?? inferred.title;
@@ -372,6 +438,7 @@ async function scanEbookFile(filePath: string, index = 0): Promise<PublicBook> {
     fileName,
     relativePath,
     filePath,
+    fileHash,
     sizeBytes: stats.size,
     lastScannedAt: new Date()
   };
@@ -464,6 +531,20 @@ export async function importUploadedBookFiles(files: UploadedBookFile[]): Promis
   const importedBooks: PublicBook[] = [];
 
   for (const [index, file] of files.entries()) {
+    const fileHash = await calculateFileHash(file.tempPath);
+    const existingBook = await BookModel.findOne({ fileHash }).lean();
+
+    if (existingBook) {
+      logger.info('library upload duplicate skipped', {
+        index,
+        originalName: file.originalName,
+        existingPublicId: existingBook.publicId,
+        existingRelativePath: existingBook.relativePath
+      });
+      await deleteFileIfPresent(file.tempPath);
+      continue;
+    }
+
     const safeFileName = sanitizeUploadFileName(file.originalName);
     const destination = await resolveUniqueDestination(uploadDirectory, safeFileName);
 
@@ -557,4 +638,44 @@ export async function getBookFile(id: string): Promise<Book> {
   }
 
   return toBookWithFile(book);
+}
+
+export async function deleteBook(id: string): Promise<DeletedBookResult> {
+  const book = await BookModel.findOne({ publicId: id }).lean();
+
+  if (!book) {
+    throw new HttpError(404, 'BOOK_NOT_FOUND', 'Livre introuvable.');
+  }
+
+  const publicBook = toPublicBook(book);
+  const fileDeleted = await deleteBookFile(book);
+  let coverDeleted = false;
+
+  try {
+    coverDeleted = await deleteLocalCover(book);
+  } catch (error) {
+    logger.warn('book cover deletion failed', {
+      publicId: book.publicId,
+      coverUrl: book.coverUrl,
+      error: serializeError(error)
+    });
+  }
+
+  await BookModel.deleteOne({ publicId: id });
+  const indexed = await deleteBookFromTypesense(id);
+
+  logger.info('book deleted', {
+    publicId: book.publicId,
+    relativePath: book.relativePath,
+    fileDeleted,
+    coverDeleted,
+    indexed
+  });
+
+  return {
+    book: publicBook,
+    fileDeleted,
+    coverDeleted,
+    indexed
+  };
 }

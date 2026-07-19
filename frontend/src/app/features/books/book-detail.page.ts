@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   LucideArrowLeft,
   LucideCircleUser,
@@ -9,9 +9,11 @@ import {
   LucideMenu,
   LucideSend,
   LucideShield,
+  LucideTrash2,
   LucideX
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
+import { AdminService } from '../../core/admin.service';
 import { readApiError } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
 import { BooksService } from '../../core/books.service';
@@ -33,6 +35,7 @@ import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
     LucideMenu,
     LucideSend,
     LucideShield,
+    LucideTrash2,
     LucideX,
     LeafSpinnerComponent
   ],
@@ -41,7 +44,9 @@ import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
 })
 export class BookDetailPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly booksService = inject(BooksService);
+  private readonly adminService = inject(AdminService);
   private readonly auth = inject(AuthService);
   private readonly favoritesService = inject(FavoritesService);
   private readonly bookId = this.route.snapshot.paramMap.get('id') ?? '';
@@ -53,6 +58,7 @@ export class BookDetailPage {
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
   readonly isSending = signal(false);
+  readonly isDeleting = signal(false);
   readonly error = signal<string | null>(null);
   readonly sentMessage = signal<string | null>(null);
   readonly menuOpen = signal(false);
@@ -111,6 +117,36 @@ export class BookDetailPage {
     ).subscribe({
       next: (result) => {
         this.sentMessage.set(`Envoi accepte vers ${result.to}.`);
+      },
+      error: (error: unknown) => {
+        this.error.set(readApiError(error));
+      }
+    });
+  }
+
+  deleteBook() {
+    const book = this.book();
+
+    if (!book || !this.isAdmin() || this.isDeleting()) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Supprimer definitivement "${book.title}" ? Le fichier ebook sera aussi supprime du serveur.`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.isDeleting.set(true);
+    this.error.set(null);
+    this.sentMessage.set(null);
+
+    this.adminService.deleteBook(book.id).pipe(
+      finalize(() => this.isDeleting.set(false))
+    ).subscribe({
+      next: () => {
+        this.favoritesService.remove(book.id);
+        void this.router.navigateByUrl('/books');
       },
       error: (error: unknown) => {
         this.error.set(readApiError(error));

@@ -93,6 +93,13 @@ export interface AdminBookUploadResponse {
   total: number;
 }
 
+export interface AdminBookDeleteResponse {
+  book: Book;
+  fileDeleted: boolean;
+  coverDeleted: boolean;
+  indexed: boolean;
+}
+
 export type AdminMaintenanceJobStatus = 'running' | 'completed' | 'failed';
 export type AdminMaintenanceJobType = 'library-rescan' | 'search-reindex';
 

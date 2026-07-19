@@ -8,6 +8,7 @@ import { config } from '../config.js';
 import { HttpError } from '../errors.js';
 import { createUser, listUsers } from '../services/auth.service.js';
 import {
+  deleteBook,
   importUploadedBookFiles,
   isSupportedEbookFileName,
   refreshLibrary,
@@ -25,6 +26,7 @@ const createUserSchema = z.object({
   kindleEmail: z.union([z.string().email(), z.literal('')]).optional(),
   role: z.enum(['user', 'admin']).optional()
 });
+const idSchema = z.string().min(1);
 
 export const adminRouter = Router();
 
@@ -132,6 +134,11 @@ adminRouter.post('/library/upload', uploadBooks, asyncHandler(async (req, res) =
     await cleanupUploadedFiles(files);
     throw error;
   }
+}));
+
+adminRouter.delete('/books/:id', asyncHandler(async (req, res) => {
+  const id = idSchema.parse(req.params.id);
+  res.json(await deleteBook(id));
 }));
 
 adminRouter.post('/library/rescan', asyncHandler(async (_req, res) => {

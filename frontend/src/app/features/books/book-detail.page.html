@@ -127,6 +127,17 @@
           >
             <svg lucideHeart aria-hidden="true" [size]="21"></svg>
           </button>
+
+          @if (isAdmin()) {
+            <button type="button" class="delete-action" (click)="deleteBook()" [disabled]="isDeleting()">
+              @if (isDeleting()) {
+                <app-leaf-spinner [compact]="true" label="Suppression"></app-leaf-spinner>
+              } @else {
+                <svg lucideTrash2 aria-hidden="true" [size]="17"></svg>
+              }
+              <span>{{ isDeleting() ? 'Suppression...' : 'Supprimer le livre' }}</span>
+            </button>
+          }
         </div>
       </section>
 

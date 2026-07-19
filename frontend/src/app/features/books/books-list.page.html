@@ -218,6 +218,23 @@
                 <svg lucideSend aria-hidden="true" [size]="17"></svg>
               }
             </button>
+
+            @if (isAdmin()) {
+              <button
+                type="button"
+                class="book-action-button delete-book-button"
+                [disabled]="deletingBookIds().has(book.id)"
+                [title]="'Supprimer ' + book.title"
+                [attr.aria-label]="'Supprimer ' + book.title"
+                (click)="deleteBook(book)"
+              >
+                @if (deletingBookIds().has(book.id)) {
+                  <app-leaf-spinner [compact]="true" label="Suppression"></app-leaf-spinner>
+                } @else {
+                  <svg lucideTrash2 aria-hidden="true" [size]="16"></svg>
+                }
+              </button>
+            }
           </div>
         </article>
       }
