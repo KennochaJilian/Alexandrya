@@ -1,3 +1,4 @@
+import { listActivity } from '../services/activity.service.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.middleware.js';
@@ -29,4 +30,8 @@ authRouter.get('/me', requireAuth, asyncHandler(async (req, res) => {
 authRouter.patch('/me', requireAuth, asyncHandler(async (req, res) => {
   const input = updateProfileSchema.parse(req.body);
   res.json({ user: await updateProfile(req.user!.id, input) });
+}));
+
+authRouter.get('/me/activity', requireAuth, asyncHandler(async (req, res) => {
+  res.json(await listActivity(req.query, req.user!.id));
 }));

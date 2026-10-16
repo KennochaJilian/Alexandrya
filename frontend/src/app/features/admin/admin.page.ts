@@ -1,3 +1,4 @@
+import { ActivityHistoryComponent } from '../../shared/activity-history.component';
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal, type WritableSignal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -25,6 +26,7 @@ import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
 @Component({
   selector: 'app-admin-page',
   imports: [
+    ActivityHistoryComponent,
     CommonModule,
     ReactiveFormsModule,
     RouterLink,

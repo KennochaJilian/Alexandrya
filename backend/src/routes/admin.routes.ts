@@ -1,3 +1,4 @@
+import { listActivity } from '../services/activity.service.js';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -178,4 +179,8 @@ adminRouter.get('/jobs/:id', asyncHandler(async (req, res) => {
   }
 
   res.json({ job });
+}));
+
+adminRouter.get('/activity', asyncHandler(async (req, res) => {
+  res.json(await listActivity(req.query));
 }));

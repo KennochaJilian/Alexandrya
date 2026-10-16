@@ -1,3 +1,5 @@
+import { recordActivity } from '../services/activity.service.js';
+import { logger, serializeError } from '../utils/logger.js';
 import { Router } from 'express';
 import fs from 'node:fs/promises';
 import { z } from 'zod';
@@ -25,7 +27,7 @@ booksRouter.get('/', asyncHandler(async (req, res) => {
   res.json(await searchBooks(filters));
 }));
 
-booksRouter.get('/:id/download', asyncHandler(async (req, res) => {
+booksRouter.get('/:id/download', asyncHandler(async (req, res, next) => {
   const id = idSchema.parse(req.params.id);
   const book = await getBookFile(id);
 
@@ -35,7 +37,12 @@ booksRouter.get('/:id/download', asyncHandler(async (req, res) => {
     throw new HttpError(404, 'BOOK_FILE_NOT_FOUND', 'Fichier du livre introuvable.');
   }
 
-  res.download(book.filePath, book.fileName);
+  res.download(book.filePath, book.fileName, (error) => {
+    if (error) { next(error); return; }
+    void recordActivity(book, req.user!, 'download').catch((error: unknown) => {
+      logger.error('download activity recording failed', { error: serializeError(error) });
+    });
+  });
 }));
 
 booksRouter.get('/:id', asyncHandler(async (req, res) => {
@@ -47,5 +54,8 @@ booksRouter.post('/:id/send-to-kindle', asyncHandler(async (req, res) => {
   const id = idSchema.parse(req.params.id);
   const book = await getBookFile(id);
   const result = await sendBookToKindle(book, req.user!);
+  await recordActivity(book, req.user!, 'kindle').catch((error: unknown) => {
+    logger.error('kindle activity recording failed', { error: serializeError(error) });
+  });
   res.status(202).json({ status: 'queued', ...result });
 }));
