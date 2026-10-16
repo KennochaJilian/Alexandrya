@@ -102,16 +102,16 @@ export class WishlistDialogComponent implements AfterViewInit {
   imports: [LucideBookPlus, WishlistDialogComponent],
   template: `
     <button type="button" class="wishlist-trigger" (click)="open.set(true)">
-      <svg lucideBookPlus aria-hidden="true" [size]="17"></svg><span>{{ isAdmin() ? 'Wishlist des lecteurs' : 'Demander un livre' }}</span>
+      <svg lucideBookPlus aria-hidden="true" [size]="17"></svg><span>Wishlist</span>
     </button>
     @if (open()) { <app-wishlist-dialog (closed)="open.set(false)"></app-wishlist-dialog> }
   `,
-  styles: `:host { display: inline-flex; }
-    .wishlist-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 14px; border: 1px solid #c9b4d4; border-radius: 20px; background: var(--lavender); color: var(--purple); font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
+  styles: `:host { display: inline-flex; flex-shrink: 0; }
+    .wishlist-trigger { white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 14px; border: 1px solid #c9b4d4; border-radius: 20px; background: var(--lavender); color: var(--purple); font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
     .wishlist-trigger:focus-visible { outline: 2px solid var(--purple); outline-offset: 3px; }
-    svg { flex-shrink: 0; }`
+    svg { flex-shrink: 0; }
+    @media (max-width: 600px) { .wishlist-trigger { padding: 8px 10px; font-size: .72rem; } }`
 })
 export class WishlistTriggerComponent {
   readonly open = signal(false);
-  readonly isAdmin = inject(AuthService).isAdmin;
 }

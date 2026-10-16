@@ -1,13 +1,13 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { LucideBookOpen } from '@lucide/angular';
+import { LucideBookOpen, LucideChevronDown } from '@lucide/angular';
 import { ReadingService, type CurrentReading } from '../core/reading.service';
 import { resolveCoverUrl } from '../core/cover-url';
 
 @Component({
   selector: 'app-current-readings',
-  imports: [CommonModule, RouterLink, LucideBookOpen],
+  imports: [CommonModule, RouterLink, LucideBookOpen, LucideChevronDown],
   template: `
     @if (error()) {
       <p class="reading-error" role="status">Les lectures en cours n’ont pas pu être chargées.
@@ -15,10 +15,11 @@ import { resolveCoverUrl } from '../core/cover-url';
       </p>
     }
     @if (readings().length) {
-      <section class="current-readings" aria-labelledby="current-readings-title">
-        <div class="shelf-heading"><svg lucideBookOpen aria-hidden="true" [size]="22"></svg>
+      <details class="current-readings" open>
+        <summary class="shelf-heading"><svg lucideBookOpen aria-hidden="true" [size]="22"></svg>
           <div><span>Votre marque-page vous attend</span><h2 id="current-readings-title">Lectures en cours</h2></div>
-        </div>
+          <svg class="collapse-chevron" lucideChevronDown aria-hidden="true" [size]="20"></svg>
+        </summary>
         <div class="reading-cards">
           @for (reading of readings(); track reading.bookId) {
             <a class="reading-card" [routerLink]="['/books', reading.bookId]" [queryParams]="{ read: '1' }" [attr.aria-label]="'Reprendre ' + reading.book.title">
@@ -36,7 +37,7 @@ import { resolveCoverUrl } from '../core/cover-url';
             </a>
           }
         </div>
-      </section>
+      </details>
     }
   `,
   styleUrl: './current-readings.component.scss'

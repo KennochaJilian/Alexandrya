@@ -1,6 +1,6 @@
 :host { display: block; }
 .current-readings { width: min(100% - 32px, 1100px); margin: 16px auto 24px; padding: 20px; border: 1px solid var(--line); border-radius: 18px; background: #fff; box-shadow: 0 10px 30px rgb(75 5 101 / 6%); }
-.shelf-heading { display: flex; align-items: center; gap: 12px; color: var(--purple); margin-bottom: 16px; }
+.shelf-heading { display: flex; align-items: center; gap: 12px; color: var(--purple); margin: 0; cursor: pointer; list-style: none; }
 .shelf-heading span { color: var(--muted); font-size: .75rem; }
 h2 { margin: 4px 0 0; font-size: 1.15rem; }
 .reading-cards { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 330px); gap: 14px; overflow-x: auto; padding-bottom: 8px; }
@@ -15,3 +15,10 @@ small, time, .reading-location { font-size: .72rem; color: var(--muted); }
 .reading-error { margin: 16px; font-size: .85rem; color: var(--muted); }
 button { font: inherit; color: var(--purple); background: var(--lavender); border: 1px solid var(--line); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
 @media(max-width: 600px) { .current-readings { padding: 16px; } .reading-cards { grid-auto-columns: 95%; } }
+
+.shelf-heading::-webkit-details-marker { display: none; }
+.shelf-heading > div { flex: 1; min-width: 0; }
+.shelf-heading > svg { flex-shrink: 0; }
+.shelf-heading:focus-visible { outline: 2px solid var(--purple); outline-offset: 5px; border-radius: 4px; }
+.current-readings[open] .shelf-heading { margin-bottom: 16px; }
+.current-readings[open] .collapse-chevron { transform: rotate(180deg); }
