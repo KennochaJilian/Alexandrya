@@ -1,3 +1,4 @@
+import { CurrentReadingsComponent } from '../../shared/current-readings.component';
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal, type WritableSignal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -46,6 +47,7 @@ interface BooksSearchFormValue {
 @Component({
   selector: 'app-books-list-page',
   imports: [
+    CurrentReadingsComponent,
     CommonModule,
     ReactiveFormsModule,
     RouterLink,

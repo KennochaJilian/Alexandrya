@@ -73,6 +73,9 @@ export class BookDetailPage {
     this.booksService.getBook(this.bookId).subscribe({
       next: ({ book }) => {
         this.book.set(book);
+        if (this.route.snapshot.queryParamMap.get('read') === '1' && this.canRead(book)) {
+          this.readerOpen.set(true);
+        }
         this.isLoading.set(false);
       },
       error: (error: unknown) => {

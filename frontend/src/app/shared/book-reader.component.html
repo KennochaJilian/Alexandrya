@@ -1,10 +1,10 @@
-<dialog #dialog class="reader" aria-labelledby="reader-title" (cancel)="$event.preventDefault(); closed.emit()">
+<dialog #dialog class="reader" [class.dark]="dark()" [class.expanded]="expanded()" aria-labelledby="reader-title" (cancel)="$event.preventDefault(); cancel()">
   <header class="reader-header">
     <div>
       <span>Lecture en ligne · {{ book().format | uppercase }}</span>
       <h2 id="reader-title">{{ book().title }}</h2>
     </div>
-    <button type="button" class="close-reader" aria-label="Fermer la visionneuse" (click)="closed.emit()" autofocus>
+    <button type="button" class="close-reader" aria-label="Fermer la visionneuse" (click)="close()" autofocus>
       <svg lucideX aria-hidden="true" [size]="22"></svg>
     </button>
   </header>
@@ -15,6 +15,20 @@
         @for (item of chapters(); track $index) { <option [value]="item.href">{{ item.label }}</option> }
       </select>
     }
+    <div class="reader-options">
+      <button type="button" [attr.aria-label]="dark() ? 'Activer le mode clair' : 'Activer le mode sombre'" [attr.aria-pressed]="dark()" (click)="toggleDark()">
+        @if (dark()) { <svg lucideSun aria-hidden="true" [size]="18"></svg> }
+        @else { <svg lucideMoon aria-hidden="true" [size]="18"></svg> }
+      </button>
+      <button type="button" [attr.aria-label]="expanded() ? 'Quitter le plein écran' : 'Plein écran'" [attr.aria-pressed]="expanded()" (click)="toggleFullscreen()">
+        @if (expanded()) { <svg lucideMinimize aria-hidden="true" [size]="18"></svg> }
+        @else { <svg lucideMaximize aria-hidden="true" [size]="18"></svg> }
+      </button>
+      <button type="button" class="completed-toggle" [attr.aria-label]="completed() ? 'Reprendre la lecture' : 'Marquer comme terminé'" [disabled]="loading() || busy() || !!error()" [attr.aria-pressed]="completed()" (click)="toggleCompleted()">
+        <svg lucideCheck aria-hidden="true" [size]="17"></svg>
+        <span>{{ completed() ? 'Reprendre la lecture' : 'Marquer comme terminé' }}</span>
+      </button>
+    </div>
     <div class="text-controls">
       <button type="button" [attr.aria-label]="isPdf() ? 'Réduire le zoom' : 'Réduire le texte'" (click)="resizeText(-1)" [disabled]="loading() || busy() || !!error() || (isPdf() ? zoom() <= 50 : fontSize() <= 70)">
         <svg lucideMinus aria-hidden="true" [size]="17"></svg>
@@ -25,8 +39,9 @@
       </button>
     </div>
   </div>
+  @if (readerNotice()) { <p class="reader-notice" role="status">{{ readerNotice() }}</p> }
   <div class="reader-body" [attr.aria-busy]="loading() || busy()">
-    <div #viewport class="reader-viewport" [class.pdf]="isPdf()" [style.visibility]="loading() || error() ? 'hidden' : 'visible'" aria-label="Contenu du livre">
+    <div #viewport class="reader-viewport" (scroll)="onPdfScroll()" [class.pdf]="isPdf()" [style.visibility]="loading() || error() ? 'hidden' : 'visible'" aria-label="Contenu du livre">
       <canvas #canvas [hidden]="!isPdf()" role="img" [attr.aria-label]="'Page ' + page() + ' de ' + book().title"></canvas>
     </div>
     @if (loading()) {
@@ -38,7 +53,18 @@
     <button type="button" (click)="move(-1)" [disabled]="loading() || busy() || atStart() || !!error()" aria-label="Page précédente">
       <svg lucideArrowLeft aria-hidden="true" [size]="18"></svg><span>Précédent</span>
     </button>
-    <span class="reader-location" aria-live="polite">{{ loading() ? 'Chargement…' : location() }}</span>
+    <div class="reader-status">
+      <span class="reader-location" aria-live="polite">{{ loading() ? 'Chargement…' : location() }}</span>
+      @if (!loading()) {
+        <small role="status">
+          @switch (saveState()) {
+            @case ('saving') { Enregistrement… }
+            @case ('saved') { {{ completed() ? 'Lecture terminée' : 'Position enregistrée' }} }
+            @case ('error') { <span class="save-error">Position non sauvegardée</span> <button type="button" (click)="retrySave()">Réessayer</button> }
+          }
+        </small>
+      }
+    </div>
     <button type="button" (click)="move(1)" [disabled]="loading() || busy() || atEnd() || !!error()" aria-label="Page suivante">
       <span>Suivant</span><svg lucideArrowRight aria-hidden="true" [size]="18"></svg>
     </button>

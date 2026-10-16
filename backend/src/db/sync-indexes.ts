@@ -1,3 +1,4 @@
+import { ReadingProgressModel } from './models/reading-progress.model.js';
 import { ActivityModel } from './models/activity.model.js';
 import { AuthorModel } from './models/author.model.js';
 import { BookModel } from './models/book.model.js';
@@ -12,6 +13,7 @@ export async function syncDatabaseIndexes() {
   }
 
   await Promise.all([
+    ReadingProgressModel.syncIndexes(),
     ActivityModel.syncIndexes(),
     AuthorModel.syncIndexes(),
     BookModel.syncIndexes(),

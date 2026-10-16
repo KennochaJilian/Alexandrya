@@ -1,3 +1,4 @@
+import { listCurrentReadings } from '../services/reading-progress.service.js';
 import { listActivity } from '../services/activity.service.js';
 import { Router } from 'express';
 import { z } from 'zod';
@@ -34,4 +35,9 @@ authRouter.patch('/me', requireAuth, asyncHandler(async (req, res) => {
 
 authRouter.get('/me/activity', requireAuth, asyncHandler(async (req, res) => {
   res.json(await listActivity(req.query, req.user!.id));
+}));
+
+authRouter.get('/me/readings', requireAuth, asyncHandler(async (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json(await listCurrentReadings(req.user!.id));
 }));

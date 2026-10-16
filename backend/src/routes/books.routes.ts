@@ -1,3 +1,4 @@
+import { getReadingProgress, saveReadingProgress } from '../services/reading-progress.service.js';
 import { recordActivity } from '../services/activity.service.js';
 import { logger, serializeError } from '../utils/logger.js';
 import { Router } from 'express';
@@ -76,4 +77,14 @@ booksRouter.post('/:id/send-to-kindle', asyncHandler(async (req, res) => {
     logger.error('kindle activity recording failed', { error: serializeError(error) });
   });
   res.status(202).json({ status: 'queued', ...result });
+}));
+
+booksRouter.get('/:id/progress', asyncHandler(async (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json({ progress: await getReadingProgress(req.user!.id, idSchema.parse(req.params.id)) });
+}));
+
+booksRouter.put('/:id/progress', asyncHandler(async (req, res) => {
+  await saveReadingProgress(req.user!.id, idSchema.parse(req.params.id), req.body);
+  res.status(204).end();
 }));

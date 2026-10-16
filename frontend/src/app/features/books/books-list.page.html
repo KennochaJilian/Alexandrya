@@ -130,6 +130,9 @@
         </div>
       }
     </form>
+    @if (!hasActiveFilters()) {
+      <app-current-readings></app-current-readings>
+    }
   </section>
 
   @if (error()) {

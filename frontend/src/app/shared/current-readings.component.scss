@@ -1,0 +1,17 @@
+:host { display: block; }
+.current-readings { width: min(100% - 32px, 1100px); margin: 16px auto 24px; padding: 20px; border: 1px solid var(--line); border-radius: 18px; background: #fff; box-shadow: 0 10px 30px rgb(75 5 101 / 6%); }
+.shelf-heading { display: flex; align-items: center; gap: 12px; color: var(--purple); margin-bottom: 16px; }
+.shelf-heading span { color: var(--muted); font-size: .75rem; }
+h2 { margin: 4px 0 0; font-size: 1.15rem; }
+.reading-cards { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 330px); gap: 14px; overflow-x: auto; padding-bottom: 8px; }
+.reading-card { display: flex; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 13px; color: var(--ink); text-decoration: none; background: linear-gradient(145deg, #fff, var(--lavender)); }
+.reading-card:hover { border-color: var(--purple-soft); }
+.reading-card:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.reading-cover { flex: 0 0 52px; height: 78px; overflow: hidden; border-radius: 6px; background: var(--lavender); display: grid; place-items: center; font-family: Handlee, cursive; color: var(--purple); font-size: 1.8rem; }
+img { width: 100%; height: 100%; object-fit: cover; }
+.reading-copy { min-width: 0; display: flex; flex-direction: column; gap: 6px; font-size: .85rem; overflow-wrap: anywhere; }
+small, time, .reading-location { font-size: .72rem; color: var(--muted); }
+.resume { margin-top: 4px; font-weight: 700; font-size: .75rem; color: var(--purple); }
+.reading-error { margin: 16px; font-size: .85rem; color: var(--muted); }
+button { font: inherit; color: var(--purple); background: var(--lavender); border: 1px solid var(--line); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+@media(max-width: 600px) { .current-readings { padding: 16px; } .reading-cards { grid-auto-columns: 95%; } }
