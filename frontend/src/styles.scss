@@ -859,6 +859,14 @@ app-book-detail-page {
     align-items: center;
   }
 
+  .book-action-buttons:has(.read-action) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) 48px;
+  }
+
+  .book-action-buttons > button > svg {
+    flex-shrink: 0;
+  }
+
   .download-action,
   .kindle-action,
   .favorite-action,
@@ -1122,6 +1130,14 @@ app-book-detail-page {
     .delete-action {
       min-height: 39px;
       font-size: 0.68rem;
+    }
+
+    .book-action-buttons:has(.read-action) {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) 42px;
+
+      .read-action {
+        grid-column: 1 / -1;
+      }
     }
 
     .favorite-action {

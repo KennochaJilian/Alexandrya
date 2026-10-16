@@ -104,7 +104,7 @@
       <section class="book-actions-panel" aria-label="Actions du livre">
         <div class="book-action-buttons">
           @if (canRead(book)) {
-            <button type="button" class="kindle-action" (click)="readerOpen.set(true)">
+            <button type="button" class="kindle-action read-action" (click)="readerOpen.set(true)">
               <svg lucideBookOpen aria-hidden="true" [size]="17"></svg>
               <span>Lire en ligne</span>
             </button>
