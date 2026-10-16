@@ -1,3 +1,4 @@
+import { WishlistTriggerComponent } from '../../shared/wishlist-dialog.component';
 import { ActivityHistoryComponent } from '../../shared/activity-history.component';
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal, type WritableSignal } from '@angular/core';
@@ -27,6 +28,7 @@ import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
   selector: 'app-admin-page',
   imports: [
     ActivityHistoryComponent,
+    WishlistTriggerComponent,
     CommonModule,
     ReactiveFormsModule,
     RouterLink,

@@ -1,0 +1,40 @@
+:host { display: contents; }
+.wishlist-modal { width: min(820px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 40px); padding: 0; border: 1px solid var(--line); border-radius: 20px; background: #fdf9ff; color: var(--ink); box-shadow: 0 24px 80px rgb(32 22 40 / 25%); }
+.wishlist-modal::backdrop { background: rgb(32 22 40 / 60%); backdrop-filter: blur(4px); }
+.wishlist-header { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 24px; background: linear-gradient(90deg, #390049, #65087e); color: white; }
+.wishlist-header span { font-size: .75rem; opacity: .8; }
+h2 { margin: 4px 0 0; font-size: 1.3rem; }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--purple); background: var(--lavender); cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--purple-soft); outline-offset: 2px; }
+.close-button { background: rgb(255 255 255 / 10%); color: white; border-color: rgb(255 255 255 / 25%); }
+.wishlist-content { padding: 24px; }
+h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; color: var(--purple); font-size: 1.05rem; }
+.request-form > p, .empty-state { font-size: .82rem; color: var(--muted); line-height: 1.7; }
+form, label { display: grid; gap: 8px; }
+form { gap: 14px; }
+label { font-size: .78rem; font-weight: 700; }
+.form-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+input, textarea, select { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: inherit; color: var(--ink); background: white; }
+textarea { resize: vertical; }
+.submit-button { justify-self: start; background: var(--purple); color: white; border-color: var(--purple); font-size: .8rem; font-weight: 700; }
+.message { padding: 12px; font-size: .82rem; line-height: 1.6; border-radius: 10px; }
+.error { color: var(--danger); background: #fff0f0; }
+.success { color: #326547; background: #edf5ef; }
+.requests-section { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 22px; }
+.list-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.refresh-button { font-size: .72rem; }
+.total, small, time { font-size: .7rem; color: var(--muted); }
+.requests-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; }
+.request-card { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; border: 1px solid var(--line); border-radius: 14px; padding: 18px; background: white; min-width: 0; overflow-wrap: anywhere; }
+h4 { margin: 0; font-size: .95rem; }
+.request-card p { margin: 0; font-size: .8rem; line-height: 1.6; }
+.author, .requester { color: var(--muted); }
+.notes { white-space: pre-wrap; }
+.status { padding: 5px 9px; border-radius: 20px; background: var(--lavender); color: var(--purple); font-size: .68rem; font-weight: 700; }
+.status.fulfilled { background: #edf5ef; color: #326547; }
+.status.rejected { background: #fff0f0; color: var(--danger); }
+.status-field { width: 100%; }
+time { margin-top: auto; padding-top: 6px; }
+.pagination { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 18px; font-size: .75rem; }
+@media(max-width: 600px) { .wishlist-modal { width: calc(100vw - 16px); max-height: calc(100dvh - 20px); border-radius: 14px; } .wishlist-content { padding: 16px; } .form-fields { grid-template-columns: 1fr; } }

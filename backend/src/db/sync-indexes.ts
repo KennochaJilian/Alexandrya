@@ -1,3 +1,4 @@
+import { WishlistModel, WishlistNotificationModel } from './models/wishlist.model.js';
 import { ReadingProgressModel } from './models/reading-progress.model.js';
 import { ActivityModel } from './models/activity.model.js';
 import { AuthorModel } from './models/author.model.js';
@@ -13,6 +14,8 @@ export async function syncDatabaseIndexes() {
   }
 
   await Promise.all([
+    WishlistModel.syncIndexes(),
+    WishlistNotificationModel.syncIndexes(),
     ReadingProgressModel.syncIndexes(),
     ActivityModel.syncIndexes(),
     AuthorModel.syncIndexes(),

@@ -1,3 +1,4 @@
+import { wishlistRouter } from './routes/wishlist.routes.js';
 import cors from 'cors';
 import express from 'express';
 import { config } from './config.js';
@@ -28,6 +29,7 @@ export function createApp() {
   });
 
   app.use('/api/auth', authRouter);
+  app.use('/api/wishlist', requireAuth, wishlistRouter);
   app.use('/api/books', requireAuth, booksRouter);
   app.use('/api/admin', requireAuth, requireAdmin, adminRouter);
 

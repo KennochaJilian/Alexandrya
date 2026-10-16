@@ -1,0 +1,66 @@
+<dialog #dialog class="wishlist-modal" aria-labelledby="wishlist-title" (cancel)="$event.preventDefault(); closed.emit()">
+  <header class="wishlist-header">
+    <div><span>Vos envies de lecture</span><h2 id="wishlist-title">La wishlist</h2></div>
+    <button type="button" class="close-button" aria-label="Fermer la wishlist" (click)="closed.emit()"><svg lucideX aria-hidden="true" [size]="22"></svg></button>
+  </header>
+  <div class="wishlist-content">
+    <section class="request-form">
+      <h3><svg lucideBookPlus aria-hidden="true" [size]="20"></svg> Un livre vous manque ?</h3>
+      <p>Proposez-le pour enrichir la bibliothèque. Les nouvelles demandes sont transmises aux admins à 18 h 30 (heure de Paris), ou dès que 5 nouvelles demandes sont en attente au total.</p>
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="form-fields">
+          <label>Titre du livre *<input formControlName="title" required maxlength="250" placeholder="Le titre que vous aimeriez lire" [readOnly]="submitting()" /></label>
+          <label>Auteur <input formControlName="author" maxlength="200" placeholder="Si vous le connaissez" [readOnly]="submitting()" /></label>
+        </div>
+        <label>Précisions <textarea formControlName="notes" rows="2" maxlength="1000" placeholder="Tome, édition, langue ou toute autre précision utile" [readOnly]="submitting()"></textarea></label>
+        <button type="submit" class="submit-button" [disabled]="submitting()">
+          @if (submitting()) { <app-leaf-spinner [compact]="true" label="Envoi de la demande"></app-leaf-spinner> }
+          @else { <svg lucideSend aria-hidden="true" [size]="16"></svg> }
+          {{ submitting() ? 'Enregistrement…' : 'Ajouter à la wishlist' }}
+        </button>
+      </form>
+    </section>
+    @if (error()) { <p class="message error" role="alert">{{ error() }}</p> }
+    @if (success()) { <p class="message success" role="status">{{ success() }}</p> }
+    @if (isAdmin() && !notificationsConfigured()) {
+      <p class="message error" role="status">Les demandes sont conservées, mais l’envoi des mails nécessite de configurer SMTP_HOST et MAIL_FROM sur le serveur.</p>
+    }
+    <section class="requests-section" [attr.aria-busy]="loading()">
+      <div class="list-heading"><h3>{{ isAdmin() ? 'Les demandes des lecteurs' : 'Mes demandes' }}</h3>
+        <button type="button" class="refresh-button" [disabled]="loading()" (click)="load(page())">Actualiser</button>
+      </div>
+      @if (loading()) { <app-leaf-spinner label="Chargement des demandes"></app-leaf-spinner> }
+      @else if (!requests().length) { <p class="empty-state">Aucune demande pour le moment. Une envie de lecture ?</p> }
+      @else {
+        <p class="total">{{ total() }} demande{{ total() > 1 ? 's' : '' }}</p>
+        <div class="requests-grid">
+          @for (request of requests(); track request.id) {
+            <article class="request-card">
+              <span class="status" [class.fulfilled]="request.status === 'fulfilled'" [class.rejected]="request.status === 'rejected'">{{ statusLabel(request.status) }}</span>
+              <h4>{{ request.title }}</h4>
+              @if (request.author) { <p class="author">{{ request.author }}</p> }
+              @if (request.notes) { <p class="notes">{{ request.notes }}</p> }
+              @if (isAdmin()) {
+                <p class="requester">{{ request.userName ? request.userName + ' · ' : '' }}{{ request.userEmail }}</p>
+                <small>{{ request.notifiedAt ? 'Signalée aux admins' : 'Notification en attente' }}</small>
+                <label class="status-field">Suivi de la demande
+                  <select [value]="request.status" [disabled]="updating().has(request.id)" (change)="changeStatus(request, $event)">
+                    <option value="pending">À ajouter</option><option value="fulfilled">Ajouté</option><option value="rejected">Refusé</option>
+                  </select>
+                </label>
+              }
+              <time [attr.datetime]="request.createdAt">{{ request.createdAt | date:'dd/MM/yyyy à HH:mm' }}</time>
+            </article>
+          }
+        </div>
+        @if (totalPages() > 1) {
+          <nav class="pagination" aria-label="Pagination des demandes">
+            <button type="button" [disabled]="page() <= 1" (click)="load(page() - 1)">Précédent</button>
+            <span>{{ page() }} / {{ totalPages() }}</span>
+            <button type="button" [disabled]="page() >= totalPages()" (click)="load(page() + 1)">Suivant</button>
+          </nav>
+        }
+      }
+    </section>
+  </div>
+</dialog>

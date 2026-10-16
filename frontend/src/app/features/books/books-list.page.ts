@@ -1,3 +1,4 @@
+import { WishlistTriggerComponent } from '../../shared/wishlist-dialog.component';
 import { CurrentReadingsComponent } from '../../shared/current-readings.component';
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal, type WritableSignal } from '@angular/core';
@@ -48,6 +49,7 @@ interface BooksSearchFormValue {
   selector: 'app-books-list-page',
   imports: [
     CurrentReadingsComponent,
+    WishlistTriggerComponent,
     CommonModule,
     ReactiveFormsModule,
     RouterLink,

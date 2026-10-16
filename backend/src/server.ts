@@ -1,3 +1,4 @@
+import { startWishlistNotificationScheduler } from './services/wishlist-notification.service.js';
 import { config } from './config.js';
 import { createApp } from './app.js';
 import { connectDatabase } from './db/mongoose.js';
@@ -14,6 +15,7 @@ process.on('uncaughtException', (error) => {
 
 await connectDatabase();
 const app = createApp();
+startWishlistNotificationScheduler();
 
 app.listen(config.port, () => {
   logger.info('Alexandrya API listening', { port: config.port });

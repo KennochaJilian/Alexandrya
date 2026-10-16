@@ -1,3 +1,5 @@
+import { listWishlist, updateWishlistStatus, wishlistStatusSchema } from '../services/wishlist.service.js';
+import { wishlistMailConfigured } from '../services/wishlist-notification.service.js';
 import { listActivity } from '../services/activity.service.js';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
@@ -183,4 +185,14 @@ adminRouter.get('/jobs/:id', asyncHandler(async (req, res) => {
 
 adminRouter.get('/activity', asyncHandler(async (req, res) => {
   res.json(await listActivity(req.query));
+}));
+
+adminRouter.get('/wishlist', asyncHandler(async (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json({ ...await listWishlist(req.query), notificationsConfigured: wishlistMailConfigured() });
+}));
+adminRouter.patch('/wishlist/:id', asyncHandler(async (req, res) => {
+  const { status } = wishlistStatusSchema.parse(req.body);
+  await updateWishlistStatus(idSchema.parse(req.params.id), status);
+  res.status(204).end();
 }));

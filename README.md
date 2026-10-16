@@ -155,3 +155,11 @@ npm run seed:user --workspace backend -- email@example.com "mot-de-passe" "Nom" 
 npm run library:rescan --workspace backend
 npm run search:sync --workspace backend
 ```
+
+## Wishlist des lecteurs
+
+Le bouton de l’accueil ouvre une modale pour demander un livre (titre, auteur et précisions). Les lecteurs voient uniquement leurs demandes ; les admins voient la liste globale depuis cette modale ou la console et peuvent marquer une demande comme ajoutée ou refusée. Une même personne ne peut pas créer deux demandes en attente avec le même titre et auteur.
+
+Les nouveaux souhaits encore en attente sont envoyés individuellement à tous les comptes de rôle `admin`, avec la configuration SMTP existante (`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`). Le déclenchement a lieu dès 5 nouvelles demandes au total, ou à 18 h 30 en `Europe/Paris` (heures d’été et d’hiver prises en compte). Les demandes déjà signalées ne sont pas incluses à nouveau le soir. Une demande arrivée après 18 h 30 attend le lendemain, sauf si le seuil est atteint.
+
+Le planificateur tourne dans le processus API, vérifie les échéances toutes les 30 secondes et reprend les échéances manquées au démarrage. Le VPS doit donc garder l’API en fonctionnement. Les demandes et le lot de notification sont persistés dans MongoDB ; un verrou évite les envois concurrents et les destinataires déjà servis sont mémorisés pour les reprises après erreur SMTP. Comme pour tout envoi SMTP, un arrêt entre l’acceptation du mail et son accusé de traitement en base peut occasionnellement produire un doublon. Sans SMTP ou sans admin, les demandes restent conservées en attente.
