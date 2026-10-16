@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, DestroyRef, ElementRef, HostListener, inject, input, output, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { LucideArrowLeft, LucideArrowRight, LucideMinus, LucidePlus, LucideMoon, LucideSun, LucideMaximize, LucideMinimize, LucideCheck, LucideX } from '@lucide/angular';
+import { LucideMinus, LucidePlus, LucideMoon, LucideSun, LucideMaximize, LucideMinimize, LucideCheck, LucideSettings2, LucideX } from '@lucide/angular';
 import { firstValueFrom } from 'rxjs';
+import type Contents from 'epubjs/types/contents';
+import { readerGesture, visibleEpubCfi, type ReaderPointer } from './reader-interaction';
 import type EpubBook from 'epubjs/types/book';
 import type Rendition from 'epubjs/types/rendition';
 import type { Location } from 'epubjs/types/rendition';
@@ -14,7 +16,7 @@ import { LeafSpinnerComponent } from './leaf-spinner.component';
 
 @Component({
   selector: 'app-book-reader',
-  imports: [CommonModule, LucideArrowLeft, LucideArrowRight, LucideMinus, LucidePlus, LucideMoon, LucideSun, LucideMaximize, LucideMinimize, LucideCheck, LucideX, LeafSpinnerComponent],
+  imports: [CommonModule, LucideMinus, LucidePlus, LucideMoon, LucideSun, LucideMaximize, LucideMinimize, LucideCheck, LucideSettings2, LucideX, LeafSpinnerComponent],
   templateUrl: './book-reader.component.html',
   styleUrl: './book-reader.component.scss'
 })
@@ -23,6 +25,7 @@ export class BookReaderComponent implements AfterViewInit {
   readonly closed = output<void>();
   readonly loading = signal(true);
   readonly busy = signal(false);
+  readonly controlsVisible = signal(true);
   readonly error = signal<string | null>(null);
   readonly page = signal(1);
   readonly totalPages = signal(0);
@@ -51,6 +54,9 @@ export class BookReaderComponent implements AfterViewInit {
   private renderTask?: RenderTask;
   private resizeObserver?: ResizeObserver;
   private resizeTimer?: ReturnType<typeof setTimeout>;
+  private controlsTimer?: ReturnType<typeof setTimeout>;
+  private pointerStart?: ReaderPointer & { id: number };
+  private readonly contentListeners = new Map<Document, () => void>();
   private saveTimer?: ReturnType<typeof setTimeout>;
   private lastPosition?: ReadingPosition;
   private lastSaved = '';
@@ -63,8 +69,12 @@ export class BookReaderComponent implements AfterViewInit {
 
   constructor() {
     this.destroyRef.onDestroy(() => {
+      this.captureCurrentEpub();
       this.flushProgress();
       this.destroyed = true;
+      clearTimeout(this.controlsTimer);
+      for (const remove of this.contentListeners.values()) remove();
+      this.contentListeners.clear();
       clearTimeout(this.saveTimer);
       clearTimeout(this.resizeTimer);
       this.resizeObserver?.disconnect();
@@ -83,6 +93,7 @@ export class BookReaderComponent implements AfterViewInit {
     this.previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     this.dialog().nativeElement.showModal();
+    this.showControls();
     try {
       const [data, { progress }] = await Promise.all([
         firstValueFrom(this.books.readBook(this.book().id).pipe(takeUntilDestroyed(this.destroyRef))),
@@ -122,15 +133,12 @@ export class BookReaderComponent implements AfterViewInit {
           body: { 'line-height': '1.7', 'font-family': 'Georgia, serif' }, img: { 'max-width': '100%' }
         });
         this.applyEpubTheme();
-        this.rendition.on('relocated', (value: Location) => {
-          if (this.destroyed) return;
-          this.atStart.set(value.atStart);
-          this.atEnd.set(value.atEnd);
-          this.chapter.set(value.start.href);
-          this.location.set(`Page ${value.start.displayed.page} / ${value.start.displayed.total} du chapitre`);
-          this.lastPosition = { format: 'epub', cfi: value.start.cfi, label: this.location(), completed: this.completed() };
-          this.scheduleProgress();
+        this.rendition.hooks.content.register((content: Contents) => this.bindContentGestures(content));
+        this.rendition.hooks.unloaded.register((view: { contents?: Contents }) => {
+          const doc = view.contents?.document;
+          if (doc) { this.contentListeners.get(doc)?.(); this.contentListeners.delete(doc); }
         });
+        this.rendition.on('relocated', (value: Location) => this.captureEpubLocation(value));
         this.rendition.on('keyup', (event: KeyboardEvent) => this.onKey(event));
         this.rendition.on('displayError', () => { if (this.resumeReady) this.fail(); });
         try {
@@ -150,7 +158,9 @@ export class BookReaderComponent implements AfterViewInit {
       if (this.destroyed) return;
       this.loading.set(false);
       this.resumeReady = true;
+      this.captureCurrentEpub();
       this.scheduleProgress();
+      this.showControls();
       this.resizeObserver = new ResizeObserver(() => {
         clearTimeout(this.resizeTimer);
         this.resizeTimer = setTimeout(() => {
@@ -164,6 +174,7 @@ export class BookReaderComponent implements AfterViewInit {
   private fail() {
     this.error.set('Impossible d’ouvrir le livre ou de récupérer sa position. Fermez la visionneuse pour réessayer, ou téléchargez le livre.');
     this.loading.set(false);
+    this.showControls();
   }
 
   private async renderPdf() {
@@ -207,7 +218,13 @@ export class BookReaderComponent implements AfterViewInit {
         this.savedScroll = 0;
         this.page.update(value => Math.max(1, Math.min(this.totalPages(), value + direction)));
         await this.renderPdf();
-      } else { await (direction > 0 ? this.rendition?.next() : this.rendition?.prev()); }
+      } else {
+        await (direction > 0 ? this.rendition?.next() : this.rendition?.prev());
+        // EPUB.js emits relocated on a later animation frame; do not save the old page on a quick close.
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+        this.captureCurrentEpub();
+      }
+      this.flushProgress();
     });
   }
 
@@ -271,7 +288,7 @@ export class BookReaderComponent implements AfterViewInit {
   }
 
   cancel() { if (this.expanded()) { void this.toggleFullscreen(); return; } this.close(); }
-  close() { this.flushProgress(); this.closed.emit(); }
+  close() { this.captureCurrentEpub(); this.flushProgress(); this.closed.emit(); }
 
   onPdfScroll() {
     if (this.isPdf() && this.resumeReady && !this.busy()) this.capturePdfPosition();
@@ -288,6 +305,89 @@ export class BookReaderComponent implements AfterViewInit {
   toggleCompleted() {
     this.completed.update(value => !value);
     if (this.lastPosition) { this.lastPosition = { ...this.lastPosition, completed: this.completed() }; this.flushProgress(); }
+  }
+
+  private captureEpubLocation(value: Location) {
+    if (this.destroyed || !value?.start?.cfi) return;
+    this.atStart.set(Boolean(value.atStart));
+    this.atEnd.set(Boolean(value.atEnd));
+    const href = value.start.href.split('#')[0] ?? '';
+    this.chapter.set(this.chapters().find(item => href.endsWith(item.href.split('#')[0] ?? ''))?.href ?? value.start.href);
+    this.location.set(`Page ${value.start.displayed.page} / ${value.start.displayed.total} du chapitre`);
+    let cfi = value.start.cfi;
+    if (this.resumeReady && this.rendition) {
+      try {
+        const contents = this.rendition.getContents() as unknown as Contents[];
+        cfi = visibleEpubCfi(contents, this.viewport().nativeElement.getBoundingClientRect()) ?? cfi;
+      } catch { /* A fixed-layout or image-only page can use the engine's own CFI. */ }
+    }
+    this.lastPosition = { format: 'epub', cfi, label: this.location(), completed: this.completed() };
+    this.scheduleProgress();
+  }
+
+  private captureCurrentEpub() {
+    if (!this.resumeReady || this.isPdf() || this.destroyed || this.error()) return;
+    // Read the live manager location, not the last asynchronous relocated event.
+    const current = this.rendition?.currentLocation() as unknown as Location | undefined;
+    if (current?.start) this.captureEpubLocation(current);
+  }
+
+  showControls() {
+    if (this.destroyed) return;
+    this.controlsVisible.set(true);
+    clearTimeout(this.controlsTimer);
+    this.controlsTimer = setTimeout(() => {
+      const active = document.activeElement;
+      if (this.loading() || this.error() || this.saveState() === 'error' || active?.tagName === 'SELECT') {
+        this.showControls();
+        return;
+      }
+      const controls = this.dialog().nativeElement.querySelector('.reader-controls');
+      if (active && controls?.contains(active)) this.dialog().nativeElement.focus({ preventScroll: true });
+      this.controlsVisible.set(false);
+    }, 3000);
+  }
+
+  pointerDown(event: PointerEvent, content?: Contents) {
+    if (!event.isPrimary || event.button !== 0) return;
+    const target = event.target as Element | null;
+    if (target?.closest?.('a, button, input, select, textarea, [contenteditable="true"], .reader-controls')) return;
+    const frame = content?.window.frameElement?.getBoundingClientRect();
+    const rect = this.dialog().nativeElement.getBoundingClientRect();
+    this.pointerStart = { id: event.pointerId, x: event.clientX + (frame?.left ?? 0) - rect.left,
+      y: event.clientY + (frame?.top ?? 0) - rect.top, time: Date.now() };
+  }
+
+  pointerUp(event: PointerEvent, content?: Contents) {
+    const start = this.pointerStart;
+    this.pointerStart = undefined;
+    if (!start || start.id !== event.pointerId) return;
+    const frame = content?.window.frameElement?.getBoundingClientRect();
+    const rect = this.dialog().nativeElement.getBoundingClientRect();
+    const selected = (content?.document ?? document).getSelection()?.isCollapsed === false;
+    const action = readerGesture(start, { x: event.clientX + (frame?.left ?? 0) - rect.left,
+      y: event.clientY + (frame?.top ?? 0) - rect.top, time: Date.now() }, rect.width, selected);
+    if (action === 'controls') this.showControls();
+    if (action === 'previous') this.move(-1);
+    if (action === 'next') this.move(1);
+  }
+
+  pointerCancel() { this.pointerStart = undefined; }
+
+  private bindContentGestures(content: Contents) {
+    const doc = content.document;
+    if (this.contentListeners.has(doc)) return;
+    const down = (event: PointerEvent) => this.pointerDown(event, content);
+    const up = (event: PointerEvent) => this.pointerUp(event, content);
+    const cancel = () => this.pointerCancel();
+    doc.addEventListener('pointerdown', down);
+    doc.addEventListener('pointerup', up);
+    doc.addEventListener('pointercancel', cancel);
+    this.contentListeners.set(doc, () => {
+      doc.removeEventListener('pointerdown', down);
+      doc.removeEventListener('pointerup', up);
+      doc.removeEventListener('pointercancel', cancel);
+    });
   }
 
   private scheduleProgress() {
@@ -310,19 +410,20 @@ export class BookReaderComponent implements AfterViewInit {
     const sequence = ++this.writeSequence;
     this.saveState.set('saving');
     void this.reading.save(this.book().id, position).then(() => {
-      if (!this.destroyed && sequence === this.writeSequence) this.saveState.set('saved');
+      if (!this.destroyed && sequence === this.writeSequence && JSON.stringify({ ...this.lastPosition, completed: this.completed() }) === signature) this.saveState.set('saved');
     }).catch(() => {
-      if (sequence === this.writeSequence) { this.lastSaved = ''; if (!this.destroyed) this.saveState.set('error'); }
+      if (sequence === this.writeSequence) { this.lastSaved = ''; if (!this.destroyed) { this.saveState.set('error'); this.showControls(); } }
     });
   }
 
   @HostListener('document:visibilitychange')
-  visibilityChanged() { if (document.visibilityState === 'hidden') this.flushProgress(); }
+  visibilityChanged() { if (document.visibilityState === 'hidden') { this.captureCurrentEpub(); this.flushProgress(); } }
   @HostListener('window:pagehide')
-  pageHidden() { this.flushProgress(); }
+  pageHidden() { this.captureCurrentEpub(); this.flushProgress(); }
 
   @HostListener('document:keydown', ['$event'])
   onKey(event: KeyboardEvent) {
+    if (event.key === 'Tab') this.showControls();
     if ((event.target as HTMLElement | null)?.closest('input, select, textarea, button, a, [contenteditable]')) return;
     if (event.key === 'Escape') { event.preventDefault(); this.cancel(); }
     if (event.key === 'ArrowLeft') { event.preventDefault(); this.move(-1); }

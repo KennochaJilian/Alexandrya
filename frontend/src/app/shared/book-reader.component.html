@@ -1,4 +1,10 @@
-<dialog #dialog class="reader" [class.dark]="dark()" [class.expanded]="expanded()" aria-labelledby="reader-title" (cancel)="$event.preventDefault(); cancel()">
+<dialog #dialog class="reader" [class.dark]="dark()" [class.expanded]="expanded()" tabindex="-1" aria-labelledby="reader-title" aria-describedby="reader-gesture-help" (pointerdown)="pointerDown($event)" (pointerup)="pointerUp($event)" (pointercancel)="pointerCancel()" (cancel)="$event.preventDefault(); cancel()">
+  <p id="reader-gesture-help" class="sr-only">Touchez le côté gauche ou droit pour changer de page. Glissez vers le bas depuis le haut pour afficher les paramètres, ou touchez le centre. Les flèches du clavier permettent aussi de naviguer.</p>
+  <div class="reader-top-edge" aria-hidden="true"></div>
+  <button type="button" class="reveal-controls" [hidden]="controlsVisible()" aria-label="Afficher les paramètres" (click)="showControls()">
+    <svg lucideSettings2 aria-hidden="true" [size]="18"></svg>
+  </button>
+  <div class="reader-controls" [class.controls-hidden]="!controlsVisible()" [attr.inert]="controlsVisible() ? null : ''" [attr.aria-hidden]="!controlsVisible()" (pointerdown)="showControls()" (change)="showControls()">
   <header class="reader-header">
     <div>
       <span>Lecture en ligne · {{ book().format | uppercase }}</span>
@@ -39,7 +45,20 @@
       </button>
     </div>
   </div>
+  <div class="reader-save-status">
+      @if (!loading()) {
+        <small role="status">
+          @switch (saveState()) {
+            @case ('saving') { Enregistrement… }
+            @case ('saved') { {{ completed() ? 'Lecture terminée' : 'Position enregistrée' }} }
+            @case ('error') { <span class="save-error">Position non sauvegardée</span> <button type="button" (click)="retrySave()">Réessayer</button> }
+          }
+        </small>
+      }
+
+  </div>
   @if (readerNotice()) { <p class="reader-notice" role="status">{{ readerNotice() }}</p> }
+  </div>
   <div class="reader-body" [attr.aria-busy]="loading() || busy()">
     <div #viewport class="reader-viewport" (scroll)="onPdfScroll()" [class.pdf]="isPdf()" [style.visibility]="loading() || error() ? 'hidden' : 'visible'" aria-label="Contenu du livre">
       <canvas #canvas [hidden]="!isPdf()" role="img" [attr.aria-label]="'Page ' + page() + ' de ' + book().title"></canvas>
@@ -50,23 +69,6 @@
     @if (error()) { <div class="reader-state"><p role="alert">{{ error() }}</p></div> }
   </div>
   <footer class="reader-footer">
-    <button type="button" (click)="move(-1)" [disabled]="loading() || busy() || atStart() || !!error()" aria-label="Page précédente">
-      <svg lucideArrowLeft aria-hidden="true" [size]="18"></svg><span>Précédent</span>
-    </button>
-    <div class="reader-status">
-      <span class="reader-location" aria-live="polite">{{ loading() ? 'Chargement…' : location() }}</span>
-      @if (!loading()) {
-        <small role="status">
-          @switch (saveState()) {
-            @case ('saving') { Enregistrement… }
-            @case ('saved') { {{ completed() ? 'Lecture terminée' : 'Position enregistrée' }} }
-            @case ('error') { <span class="save-error">Position non sauvegardée</span> <button type="button" (click)="retrySave()">Réessayer</button> }
-          }
-        </small>
-      }
-    </div>
-    <button type="button" (click)="move(1)" [disabled]="loading() || busy() || atEnd() || !!error()" aria-label="Page suivante">
-      <span>Suivant</span><svg lucideArrowRight aria-hidden="true" [size]="18"></svg>
-    </button>
+    <span class="reader-location" aria-live="polite">{{ loading() ? 'Chargement…' : location() }}</span>
   </footer>
 </dialog>
