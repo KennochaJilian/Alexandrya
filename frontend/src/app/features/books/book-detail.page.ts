@@ -1,7 +1,9 @@
+import { BookReaderComponent } from '../../shared/book-reader.component';
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
+  LucideBookOpen,
   LucideArrowLeft,
   LucideCircleUser,
   LucideDownload,
@@ -26,8 +28,10 @@ import { LeafSpinnerComponent } from '../../shared/leaf-spinner.component';
 @Component({
   selector: 'app-book-detail-page',
   imports: [
+    BookReaderComponent,
     CommonModule,
     RouterLink,
+    LucideBookOpen,
     LucideArrowLeft,
     LucideCircleUser,
     LucideDownload,
@@ -55,6 +59,7 @@ export class BookDetailPage {
   readonly isAdmin = this.auth.isAdmin;
   readonly favoriteIds = this.favoritesService.favoriteIds;
   readonly book = signal<Book | null>(null);
+  readonly readerOpen = signal(false);
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
   readonly isSending = signal(false);
@@ -75,6 +80,10 @@ export class BookDetailPage {
         this.isLoading.set(false);
       }
     });
+  }
+
+  canRead(book: Book) {
+    return ['epub', 'pdf'].includes(book.format.toLowerCase());
   }
 
   downloadBook() {

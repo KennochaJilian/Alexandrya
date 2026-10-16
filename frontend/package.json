@@ -6,7 +6,9 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "prebuild": "node scripts/prepare-reader-assets.mjs",
+    "prestart": "node scripts/prepare-reader-assets.mjs"
   },
   "private": true,
   "packageManager": "npm@11.0.0",
@@ -20,6 +22,8 @@
     "@fontsource/handlee": "^5.2.7",
     "@fontsource/quicksand": "^5.2.10",
     "@lucide/angular": "^1.23.0",
+    "epubjs": "^0.3.93",
+    "pdfjs-dist": "^6.4.299",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

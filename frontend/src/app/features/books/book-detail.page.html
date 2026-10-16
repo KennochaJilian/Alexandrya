@@ -73,6 +73,10 @@
     } @else if (error() && !book()) {
       <p class="notice error" role="alert">{{ error() }}</p>
     } @else if (book(); as book) {
+      @if (readerOpen()) {
+        <app-book-reader [book]="book" (closed)="readerOpen.set(false)"></app-book-reader>
+      }
+
       <section class="book-hero">
         <span class="detail-cover">
           @if (coverSrc(book); as coverUrl) {
@@ -99,6 +103,12 @@
 
       <section class="book-actions-panel" aria-label="Actions du livre">
         <div class="book-action-buttons">
+          @if (canRead(book)) {
+            <button type="button" class="kindle-action" (click)="readerOpen.set(true)">
+              <svg lucideBookOpen aria-hidden="true" [size]="17"></svg>
+              <span>Lire en ligne</span>
+            </button>
+          }
           <button type="button" class="download-action" (click)="downloadBook()" [disabled]="isDownloading()">
             @if (isDownloading()) {
               <app-leaf-spinner [compact]="true" label="Telechargement"></app-leaf-spinner>

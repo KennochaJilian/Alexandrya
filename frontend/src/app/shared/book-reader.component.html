@@ -1,0 +1,46 @@
+<dialog #dialog class="reader" aria-labelledby="reader-title" (cancel)="$event.preventDefault(); closed.emit()">
+  <header class="reader-header">
+    <div>
+      <span>Lecture en ligne · {{ book().format | uppercase }}</span>
+      <h2 id="reader-title">{{ book().title }}</h2>
+    </div>
+    <button type="button" class="close-reader" aria-label="Fermer la visionneuse" (click)="closed.emit()" autofocus>
+      <svg lucideX aria-hidden="true" [size]="22"></svg>
+    </button>
+  </header>
+  <div class="reader-toolbar" aria-label="Options de lecture">
+    @if (!isPdf() && chapters().length) {
+      <select aria-label="Aller à un chapitre" [value]="chapter()" (change)="selectChapter($event)" [disabled]="loading() || busy() || !!error()">
+        <option value="">Sommaire</option>
+        @for (item of chapters(); track $index) { <option [value]="item.href">{{ item.label }}</option> }
+      </select>
+    }
+    <div class="text-controls">
+      <button type="button" [attr.aria-label]="isPdf() ? 'Réduire le zoom' : 'Réduire le texte'" (click)="resizeText(-1)" [disabled]="loading() || busy() || !!error() || (isPdf() ? zoom() <= 50 : fontSize() <= 70)">
+        <svg lucideMinus aria-hidden="true" [size]="17"></svg>
+      </button>
+      <span>{{ isPdf() ? 'Zoom' : 'Texte' }} {{ isPdf() ? zoom() : fontSize() }} %</span>
+      <button type="button" [attr.aria-label]="isPdf() ? 'Agrandir le zoom' : 'Agrandir le texte'" (click)="resizeText(1)" [disabled]="loading() || busy() || !!error() || (isPdf() ? zoom() >= 200 : fontSize() >= 180)">
+        <svg lucidePlus aria-hidden="true" [size]="17"></svg>
+      </button>
+    </div>
+  </div>
+  <div class="reader-body" [attr.aria-busy]="loading() || busy()">
+    <div #viewport class="reader-viewport" [class.pdf]="isPdf()" [style.visibility]="loading() || error() ? 'hidden' : 'visible'" aria-label="Contenu du livre">
+      <canvas #canvas [hidden]="!isPdf()" role="img" [attr.aria-label]="'Page ' + page() + ' de ' + book().title"></canvas>
+    </div>
+    @if (loading()) {
+      <div class="reader-state"><app-leaf-spinner label="Ouverture du livre"></app-leaf-spinner></div>
+    }
+    @if (error()) { <div class="reader-state"><p role="alert">{{ error() }}</p></div> }
+  </div>
+  <footer class="reader-footer">
+    <button type="button" (click)="move(-1)" [disabled]="loading() || busy() || atStart() || !!error()" aria-label="Page précédente">
+      <svg lucideArrowLeft aria-hidden="true" [size]="18"></svg><span>Précédent</span>
+    </button>
+    <span class="reader-location" aria-live="polite">{{ loading() ? 'Chargement…' : location() }}</span>
+    <button type="button" (click)="move(1)" [disabled]="loading() || busy() || atEnd() || !!error()" aria-label="Page suivante">
+      <span>Suivant</span><svg lucideArrowRight aria-hidden="true" [size]="18"></svg>
+    </button>
+  </footer>
+</dialog>

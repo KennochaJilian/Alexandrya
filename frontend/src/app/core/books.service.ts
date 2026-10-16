@@ -27,6 +27,10 @@ export class BooksService {
     return this.http.post<KindleSendResponse>(`${environment.apiUrl}/books/${id}/send-to-kindle`, {});
   }
 
+  readBook(id: string) {
+    return this.http.get(`${environment.apiUrl}/books/${id}/read`, { responseType: 'arraybuffer' });
+  }
+
   downloadBook(id: string) {
     return this.http.get(`${environment.apiUrl}/books/${id}/download`, {
       observe: 'response',

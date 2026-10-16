@@ -45,6 +45,24 @@ booksRouter.get('/:id/download', asyncHandler(async (req, res, next) => {
   });
 }));
 
+// Reading is authenticated by the books router mount, and is not a download event.
+booksRouter.get('/:id/read', asyncHandler(async (req, res, next) => {
+  const book = await getBookFile(idSchema.parse(req.params.id));
+  const format = book.format.toLowerCase();
+  if (format !== 'epub' && format !== 'pdf') {
+    throw new HttpError(415, 'READ_FORMAT_UNSUPPORTED', 'La lecture en ligne est disponible pour les livres EPUB et PDF.');
+  }
+  try {
+    await fs.access(book.filePath);
+  } catch {
+    throw new HttpError(404, 'BOOK_FILE_NOT_FOUND', 'Fichier du livre introuvable.');
+  }
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.type(format === 'pdf' ? 'application/pdf' : 'application/epub+zip');
+  res.sendFile(book.filePath, (error) => { if (error) next(error); });
+}));
+
 booksRouter.get('/:id', asyncHandler(async (req, res) => {
   const id = idSchema.parse(req.params.id);
   res.json({ book: await getBook(id) });
